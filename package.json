@@ -1,7 +1,7 @@
 {
   "name": "wevocalconverter",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.0.1",
   "type": "module",
   "description": "音声ファイルの形式（WAV、MP3 など）を変換する Web ツール兼ライブラリ。ブラウザで動き、音声を外部に送らない（今は WeVocalExtractor を写した土台）",
   "license": "MIT",
