@@ -1,5 +1,5 @@
 # WeVocalConverter
-WeVocalConverterは、Webブラウザ上で音声ファイルの形式（WAV、MP3 など）を変換するためのツールである。
+WeVocalConverterは、Webブラウザ上で音声ファイル形式を変換するツールである。
 
 音声ファイルはサーバーへ送らず、処理はすべてブラウザ内で行う。<br />
 画面を持たないライブラリとしても使える。
@@ -10,7 +10,7 @@ WeVocalConverterは、Webブラウザ上で音声ファイルの形式（WAV、M
 - 使い続けるもの: ライブラリ（`src/`、UI なし）と画面（`app/`）の分け方、複数のファイルを並べて順に処理するキュー、曲ごとの保存と ZIP でのまとめての保存、PWA
 - 置き換えるもの: `src/` の抽出の処理、`app/` の抽出の設定
 - 要らなくなるもの: モデル（ONNX）、`dsp/`、診断
-- 要件と進め方は [DEFINE.md](DEFINE.md)（要件定義書）。`docs/` の文書は、写した抽出の処理の説明
+- 要件は [docs/REQUIREMENT.md](docs/REQUIREMENT.md)。`docs/` のほかの文書は、写した抽出の処理の説明
 
 ## 技術スタック
 | 項目 | 内容 |
