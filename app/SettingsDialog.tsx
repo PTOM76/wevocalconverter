@@ -1,0 +1,231 @@
+import { useEffect, useState } from 'react'
+import { Box, Button, Typography } from '@mui/material'
+import { Check, Choice, Group, LANG_NAMES, Row, SettingsDialog as PevenSettingsDialog, useConfirm, useHighlighter, type SettingsCategory, type WindowMode } from 'pevenmui'
+import { UpdateSection } from 'pevenmui/pwa'
+import type { WavFormat } from 'wevocal-lib'
+import { useT, type LangSetting, type MessageKey } from './i18n'
+import Diagnose from './Diagnose'
+import { clearModels } from './models'
+import { backendAllowed } from '../src/compat'
+import { clearQueue, queueSize, type KeepMode } from './persist'
+import { DEFAULT_SETTINGS, type Settings, type ThemeSetting } from './settings'
+
+type Category = 'general' | 'extract' | 'data' | 'debug'
+
+/** 抽出の実行環境のメモリの上限の選択肢（MB） */
+const MEMORY_MB = [256, 512, 1024, 2048, 4096]
+
+/** 画面の大きさの選択肢（倍率） */
+const UI_SCALES = [0.9, 1, 1.1, 1.25, 1.5]
+
+/** 設定の検索の対象: 分類ごとのグループ名・項目名・説明文の訳文キー。項目を足したらここにも足す */
+const INDEX: Record<Category, MessageKey[]> = {
+  general: ['settings.groupAppearance', 'settings.theme', 'settings.language', 'settings.uiScale', 'settings.uiScaleHelp', 'settings.groupUpdate'],
+  extract: ['settings.groupExport', 'settings.wavFormat', 'settings.kbps', 'settings.groupExtract', 'settings.gpu', 'settings.gpuHelp', 'settings.highBand', 'settings.highBandHelp', 'settings.memory', 'settings.memoryHelp'],
+  data: ['settings.groupData', 'data.models', 'data.modelsHelp', 'data.queue', 'settings.keepQueue', 'settings.keepQueueHelp'],
+  debug: ['settings.groupDebug', 'settings.devUpdates', 'settings.devUpdatesHelp', 'settings.dialogWindow', 'settings.diagnose', 'settings.diagnoseHelp'],
+}
+
+interface Props {
+  open: boolean
+  onClose: () => void
+  /** 変わるたびに、別の窓で開いている設定画面を手前に出す */
+  focusSignal?: number
+  settings: Settings
+  onChange: (patch: Partial<Settings>) => void
+  notify: (message: string) => void
+}
+
+/** 保存したデータの1行（名前・説明と削除ボタン。確かめてから消す） */
+function DataRow(p: { label: string; help: string; confirmMessage: string; onDelete: () => Promise<void>; notify: (message: string) => void }) {
+  const t = useT()
+  const hit = useHighlighter()
+  const { confirm, dialog } = useConfirm()
+  return (
+    // 幅 0 + 最小幅 100%: 長い説明文で項目名の列が広がり、選択欄が縮まないようにする
+    <Box sx={{ gridColumn: '1 / -1', width: 0, minWidth: '100%', display: 'flex', alignItems: 'center', gap: 2 }}>
+      <Box sx={{ flex: 1, minWidth: 0 }}>
+        <Typography sx={{ fontSize: 13, width: 'fit-content', ...hit(p.label, p.help) }}>{p.label}</Typography>
+        <Typography className="selectable" sx={{ fontSize: 11, color: 'text.secondary' }}>
+          {p.help}
+        </Typography>
+      </Box>
+      <Button
+        size="small"
+        variant="outlined"
+        color="error"
+        onClick={async () => {
+          if (!(await confirm({ message: p.confirmMessage, okLabel: t('data.delete'), danger: true }))) return
+          await p.onDelete()
+          p.notify(t('data.deleted'))
+        }}
+      >
+        {t('data.delete')}
+      </Button>
+      {dialog}
+    </Box>
+  )
+}
+
+/** 保存したデータ（設定の「データ」）: モデルと、閉じたあとも残した一覧 */
+function DataSection({ notify }: { notify: (message: string) => void }) {
+  const t = useT()
+  // 残した一覧の大きさ（開いたとき・消したときに数え直す）
+  const [queueBytes, setQueueBytes] = useState<number | null>(null)
+  useEffect(() => void queueSize().then(setQueueBytes), [])
+  const mb = queueBytes === null ? '…' : (queueBytes / 2 ** 20).toFixed(1)
+  return (
+    <>
+      <DataRow label={t('data.models')} help={t('data.modelsHelp')} confirmMessage={t('data.deleteConfirm')} onDelete={clearModels} notify={notify} />
+      <DataRow
+        label={t('data.queue')}
+        help={t('data.queueHelp', { mb })}
+        confirmMessage={t('data.queueConfirm')}
+        onDelete={async () => {
+          await clearQueue()
+          setQueueBytes(0)
+        }}
+        notify={notify}
+      />
+    </>
+  )
+}
+
+/** 設定画面（外枠は PevenMUI の SettingsDialog。WeVocalSynth と同じ形） */
+export default function SettingsDialog({ open, onClose, settings, onChange, notify, focusSignal }: Props) {
+  const t = useT()
+  const categories: SettingsCategory<Category>[] = (Object.keys(INDEX) as Category[]).map((c) => ({
+    id: c,
+    label: t(`settings.cat.${c}`),
+    texts: INDEX[c].map((k) => t(k)),
+  }))
+  return (
+    <PevenSettingsDialog
+      open={open}
+      focusSignal={focusSignal}
+      onClose={onClose}
+      title={t('settings.title')}
+      settings={settings}
+      defaults={DEFAULT_SETTINGS}
+      onChange={onChange}
+      categories={categories}
+      pages={(draft, set) => ({
+        general: (
+          <>
+            <Group title={t('settings.groupAppearance')}>
+              <Row label={t('settings.theme')}>
+                <Choice<ThemeSetting>
+                  value={draft.theme}
+                  onChange={(v) => set({ theme: v })}
+                  options={[
+                    ['system', t('settings.themeSystem')],
+                    ['light', t('settings.themeLight')],
+                    ['dark', t('settings.themeDark')],
+                  ]}
+                />
+              </Row>
+              <Row label={t('settings.language')}>
+                <Choice<LangSetting>
+                  value={draft.language}
+                  onChange={(v) => set({ language: v })}
+                  options={[['auto', t('settings.languageAuto')], ...LANG_NAMES]}
+                />
+              </Row>
+              <Row label={t('settings.uiScale')} help={t('settings.uiScaleHelp')}>
+                <Choice<string>
+                  value={String(draft.uiScale)}
+                  onChange={(v) => set({ uiScale: Number(v) })}
+                  options={UI_SCALES.map((s): [string, string] => [String(s), `%`])}
+                />
+              </Row>
+            </Group>
+            <Group title={t('settings.groupUpdate')}>
+              <UpdateSection />
+            </Group>
+          </>
+        ),
+        extract: (
+          <>
+          <Group title={t('settings.groupExport')}>
+            <Row label={t('settings.wavFormat')}>
+              <Choice<WavFormat>
+                value={draft.wavFormat}
+                onChange={(v) => set({ wavFormat: v })}
+                options={[
+                  ['pcm16', '16bit'],
+                  ['pcm24', '24bit'],
+                  ['float32', '32bit float'],
+                ]}
+              />
+            </Row>
+            <Row label={t('settings.kbps')}>
+              <Choice<string>
+                value={String(draft.kbps)}
+                onChange={(v) => set({ kbps: Number(v) })}
+                options={['128', '192', '256', '320'].map((k): [string, string] => [k, `${k} kbps`])}
+              />
+            </Row>
+          </Group>
+          <Group title={t('settings.groupExtract')}>
+            {/* GPU を使えないモデルでは押せなくし、理由を出す */}
+            <Check
+              checked={draft.gpu && backendAllowed(draft.model, 'webgpu')}
+              disabled={!backendAllowed(draft.model, 'webgpu')}
+              onChange={(v) => set({ gpu: v })}
+              label={t('settings.gpu')}
+              help={backendAllowed(draft.model, 'webgpu') ? t('settings.gpuHelp') : t('settings.gpuUnsupported')}
+            />
+            <Check checked={draft.highBand} onChange={(v) => set({ highBand: v })} label={t('settings.highBand')} help={t('settings.highBandHelp')} />
+            {/* 抽出の動きを変える設定なので、開発者向けではなくここに置く（iPad などで抽出できないときに下げる） */}
+            <Row label={t('settings.memory')} help={t('settings.memoryHelp')}>
+              <Choice<string>
+                value={String(draft.memoryMb)}
+                onChange={(v) => set({ memoryMb: Number(v) })}
+                options={MEMORY_MB.map((mb): [string, string] => [String(mb), mb < 1024 ? `${mb} MB` : `${mb / 1024} GB`])}
+              />
+            </Row>
+          </Group>
+          </>
+        ),
+        data: (
+          <Group title={t('settings.groupData')}>
+            <Row label={t('settings.keepQueue')} help={t('settings.keepQueueHelp')}>
+              <Choice<KeepMode>
+                value={draft.keepQueue}
+                onChange={(v) => set({ keepQueue: v })}
+                options={[
+                  ['undownloaded', t('settings.keepUndownloaded')],
+                  ['all', t('settings.keepAll')],
+                  ['none', t('settings.keepNone')],
+                ]}
+              />
+            </Row>
+            <DataSection notify={notify} />
+          </Group>
+        ),
+        debug: (
+          <Group title={t('settings.groupDebug')}>
+            <Row label={t('settings.dialogWindow')}>
+              <Choice<WindowMode | 'auto'>
+                value={draft.dialogWindow}
+                onChange={(v) => set({ dialogWindow: v })}
+                options={[
+                  ['auto', t('settings.auto')],
+                  ['dialog', t('settings.windowDialog')],
+                  ['nativeDialog', '<dialog>'],
+                  ['popover', 'Popover API'],
+                  ['popup', t('settings.windowPopup')],
+                  ['tab', t('settings.windowTab')],
+                  ['window', t('settings.windowSub')],
+                  ['pip', 'PiP'],
+                ]}
+              />
+            </Row>
+            <Check checked={draft.devUpdates} onChange={(v) => set({ devUpdates: v })} label={t('settings.devUpdates')} help={t('settings.devUpdatesHelp')} />
+            <Diagnose memoryMb={draft.memoryMb} />
+          </Group>
+        ),
+      })}
+    />
+  )
+}
