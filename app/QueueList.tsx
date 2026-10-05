@@ -5,8 +5,6 @@ import { faDownload, faPlay, faStop, faXmark } from '@fortawesome/free-solid-svg
 import { useT } from './i18n'
 import type { QueueItem } from './useQueue'
 
-export type Stem = 'vocals' | 'accompaniment'
-
 /** 一覧で鳴らしている音（1つだけ） */
 function usePreviewPlayer() {
   const audioRef = useRef<HTMLAudioElement | null>(null)
@@ -49,15 +47,15 @@ function usePreviewPlayer() {
 
 /** 秒を「分:秒」で表す */
 const formatTime = (sec: number) => `${Math.floor(sec / 60)}:${String(Math.floor(sec % 60)).padStart(2, '0')}`
-/** 抽出する曲の一覧。PC は1行に、スマホは折り返して2行にまとめる */
+/** 変換する曲の一覧。PC は1行に、スマホは折り返して2行にまとめる */
 export function QueueList(p: {
   items: QueueItem[]
   busy: boolean
-  onSave: (item: QueueItem, stem: Stem) => void
-  /** その曲だけ抽出する（待機中・失敗した曲） */
-  onExtract: (id: number) => void
+  onSave: (item: QueueItem) => void
+  /** その曲だけ変換する（待機中・失敗した曲、設定を変えて変換し直す曲） */
+  onConvert: (id: number) => void
   onRemove: (id: number) => void
-  /** 抽出中の曲だけを中止する */
+  /** 変換中の曲だけを中止する */
   onCancel: (id: number) => void
 }) {
   const t = useT()
@@ -82,30 +80,24 @@ export function QueueList(p: {
               {statusText(it)}
             </Typography>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, ml: 'auto' }}>
-              {(['vocals', 'accompaniment'] as const).map((stem) => {
-                const blob = it[stem]
-                if (!blob) return null
-                const key = `${it.id}-${stem}`
-                const playing = player.playing === key
-                return (
-                  <Box key={stem} sx={{ display: 'flex', alignItems: 'center' }}>
-                    <Tooltip title={playing ? t('item.stop') : t('item.play')}>
-                      <IconButton size="small" onClick={() => player.toggle(key, blob)}>
-                        <FontAwesomeIcon icon={playing ? faStop : faPlay} fontSize={12} />
-                      </IconButton>
-                    </Tooltip>
-                    <Button size="small" startIcon={<FontAwesomeIcon icon={faDownload} fontSize={12} />} onClick={() => p.onSave(it, stem)}>
-                      {t(`stem.${stem}`)}
-                    </Button>
-                  </Box>
-                )
-              })}
-              {(it.status === 'waiting' || it.status === 'error' || it.status === 'cancelled') && (
-                <Button size="small" variant="outlined" disabled={p.busy} onClick={() => p.onExtract(it.id)}>
-                  {t('queue.extract')}
+              {it.result && (
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  <Tooltip title={player.playing === String(it.id) ? t('item.stop') : t('item.play')}>
+                    <IconButton size="small" onClick={() => player.toggle(String(it.id), it.result!)}>
+                      <FontAwesomeIcon icon={player.playing === String(it.id) ? faStop : faPlay} fontSize={12} />
+                    </IconButton>
+                  </Tooltip>
+                  <Button size="small" startIcon={<FontAwesomeIcon icon={faDownload} fontSize={12} />} onClick={() => p.onSave(it)}>
+                    {t('item.save', { ext: (it.ext ?? '').replace('.', '').toUpperCase() })}
+                  </Button>
+                </Box>
+              )}
+              {it.status !== 'running' && (
+                <Button size="small" variant="outlined" disabled={p.busy} onClick={() => p.onConvert(it.id)}>
+                  {t(it.status === 'done' ? 'queue.reconvert' : 'queue.convert')}
                 </Button>
               )}
-              {/* 抽出中の曲は、一覧から消す代わりにその曲だけ中止する */}
+              {/* 変換中の曲は、一覧から消す代わりにその曲だけ中止する */}
               <Tooltip title={t(it.status === 'running' ? 'item.cancel' : 'item.remove')}>
                 <span>
                   <IconButton
@@ -120,7 +112,7 @@ export function QueueList(p: {
             </Box>
           </Box>
           {/* 試聴中の行には再生位置のスライダーを出す（ドラッグ・クリックで位置を変える） */}
-          {player.playing?.startsWith(`${it.id}-`) && player.duration > 0 && (
+          {player.playing === String(it.id) && player.duration > 0 && (
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, px: 1 }}>
               <Slider
                 size="small"

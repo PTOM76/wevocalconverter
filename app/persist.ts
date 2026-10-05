@@ -1,9 +1,8 @@
 import type { QueueItem } from './useQueue'
 
 // 一覧を IndexedDB に残し、ページを閉じても次に開いたときに戻す。
-// - 待機中・失敗した曲は、元のファイルごと残す（開き直したら続きから抽出できる）。抽出中の曲は待機中として残す
-// - 抽出した結果は、まだダウンロードしていないものだけ残す。ダウンロードしても画面の一覧からは消さない（次に開いたときに出ないだけ）
-// - ボーカル・伴奏ともダウンロードした曲は残さない
+// - 待機中・失敗した曲は、元のファイルごと残す（開き直したら続きから変換できる）。変換中の曲は待機中として残す
+// - 変換した結果は、まだダウンロードしていないものだけ残す。ダウンロードしても画面の一覧からは消さない（次に開いたときに出ないだけ）
 // どこまで残すかは設定で変えられる（`KeepMode`。残さない・ダウンロードした結果も残す）
 
 const DB = 'wevocalconverter'
@@ -16,8 +15,7 @@ interface StoredItem {
   status: 'waiting' | 'done' | 'error'
   ext?: string
   error?: string
-  vocals?: Blob
-  accompaniment?: Blob
+  result?: Blob
 }
 
 function open(): Promise<IDBDatabase> {
@@ -47,23 +45,22 @@ async function tx<T>(mode: IDBTransactionMode, fn: (s: IDBObjectStore) => IDBReq
 /** 一覧をどこまで残すか（設定）。none: 残さない、undownloaded: ダウンロードしていない結果だけ、all: ダウンロードした結果も */
 export type KeepMode = 'none' | 'undownloaded' | 'all'
 
-/** 残すもの（残す必要がなければ null）。抽出中の進み具合は残さない */
+/** 残すもの（残す必要がなければ null）。変換中の進み具合は残さない */
 export function toStored(it: QueueItem, mode: KeepMode): StoredItem | null {
   if (mode === 'none') return null
   const keepSaved = mode === 'all'
-  const vocals = it.saved?.vocals && !keepSaved ? undefined : it.vocals
-  const accompaniment = it.saved?.accompaniment && !keepSaved ? undefined : it.accompaniment
+  const result = it.saved && !keepSaved ? undefined : it.result
   if (it.status === 'done') {
-    // 結果がすべてダウンロード済み（または結果がない）なら残さない
-    if (!vocals && !accompaniment) return null
-    return { id: it.id, file: it.file, status: 'done', ext: it.ext, vocals, accompaniment }
+    // 結果がダウンロード済み（または結果がない）なら残さない
+    if (!result) return null
+    return { id: it.id, file: it.file, status: 'done', ext: it.ext, result }
   }
   return { id: it.id, file: it.file, status: it.status === 'error' ? 'error' : 'waiting', error: it.error }
 }
 
 /** 残したものが変わったかを見分けるための文字列（変わったときだけ書き込む） */
 export function signature(s: StoredItem | null) {
-  return s ? `${s.status}|${s.ext ?? ''}|${s.error ?? ''}|${s.vocals ? 1 : 0}|${s.accompaniment ? 1 : 0}` : ''
+  return s ? `${s.status}|${s.ext ?? ''}|${s.error ?? ''}|${s.result ? 1 : 0}` : ''
 }
 
 /** 前回残した一覧を読む。読めなければ空 */
@@ -72,7 +69,7 @@ export async function loadQueue(): Promise<QueueItem[]> {
     const rows = (await tx<StoredItem[]>('readonly', (s) => s.getAll() as IDBRequest<StoredItem[]>)) ?? []
     return rows
       .sort((a, b) => a.id - b.id)
-      .map((r): QueueItem => ({ id: r.id, file: r.file, status: r.status, progress: r.status === 'done' ? 1 : 0, ext: r.ext, error: r.error, vocals: r.vocals, accompaniment: r.accompaniment }))
+      .map((r): QueueItem => ({ id: r.id, file: r.file, status: r.status, progress: r.status === 'done' ? 1 : 0, ext: r.ext, error: r.error, result: r.result }))
   } catch {
     return []
   }
@@ -93,7 +90,7 @@ export async function putItem(id: number, s: StoredItem | null) {
 /** 残した一覧の大きさ（バイト。元のファイルと結果の合計） */
 export async function queueSize(): Promise<number> {
   const items = await loadQueue()
-  return items.reduce((sum, it) => sum + it.file.size + (it.vocals?.size ?? 0) + (it.accompaniment?.size ?? 0), 0)
+  return items.reduce((sum, it) => sum + it.file.size + (it.result?.size ?? 0), 0)
 }
 
 /** 保存した一覧をすべて消す（設定の「データ」から。画面の一覧はそのまま） */

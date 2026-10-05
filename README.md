@@ -4,13 +4,16 @@ WeVocalConverterは、Webブラウザ上で音声ファイル形式を変換す�
 音声ファイルはサーバーへ送らず、処理はすべてブラウザ内で行う。<br />
 画面を持たないライブラリとしても使える。
 
-## 今の状態
-[WeVocalExtractor](https://github.com/PTOM76/wevocalextractor) を写して始めた土台。中身は今のところ Extractor と同じ（曲からボーカルと伴奏を取り出す）で、これから形式の変換に置き換える。
+## できること
+| 分類 | 機能 |
+| --- | --- |
+| 読み込み | 複数のファイルをまとめて追加（ドラッグ＆ドロップも）。ブラウザで読める形式（WAV、AIFF、MP3、M4A、FLAC、OGG、Opus など） |
+| 出力 | WAV（16 / 24bit、32bit float）、MP3、Opus。サンプルレート、ビットレート、モノラル |
+| 変換 | 1曲ずつ順に変換、曲ごとの進み具合と中止、変換し直し |
+| 保存 | 曲ごとの試聴と保存、すべてを ZIP でまとめて保存。閉じたあとも一覧を残す |
+| その他 | PC/スマホ対応、オフライン利用（PWA）、ライト/ダーク、日本語/英語/韓国語/中国語 |
 
-- 使い続けるもの: ライブラリ（`src/`、UI なし）と画面（`app/`）の分け方、複数のファイルを並べて順に処理するキュー、曲ごとの保存と ZIP でのまとめての保存、PWA
-- 置き換えるもの: `src/` の抽出の処理、`app/` の抽出の設定
-- 要らなくなるもの: モデル（ONNX）、`dsp/`、診断
-- 要件は [docs/REQUIREMENT.md](docs/REQUIREMENT.md)。`docs/` のほかの文書は、写した抽出の処理の説明
+要件は [docs/REQUIREMENT.md](docs/REQUIREMENT.md)。[WeVocalExtractor](https://github.com/PTOM76/wevocalextractor) を写して始めたので、キュー、保存、設定の画面は Extractor と同じ作り。
 
 ## 技術スタック
 | 項目 | 内容 |

@@ -2,14 +2,11 @@
     // https://github.com/Pitan76/Todofile
 
     // ---- セットアップ ----
-    // 初回だけ。Rust は DSP (dsp/) を触るときだけ要る
+    // 初回だけ
     "setup": [
         "git submodule update --init",
-        "npm install",
-        "todo models"
+        "npm install"
     ],
-    // wasm32 ターゲットを入れる (入っていれば何もしない)
-    "wasm:setup": "rustup target add wasm32-unknown-unknown",
     // WeVocalSynth の submodule として開発するとき: こちらの pevenmui/ を隠し、隣の ../pevenmui だけを使う
     // (同じものが2か所に見えて、違う方を直さないように)
     "setup:nested": [
@@ -19,23 +16,17 @@
     ],
     // 隣（WeVocalSynth 側）の pevenmui・wevocal-lib を更新したら、こちらの submodule の登録もそのコミットに合わせてコミットする
     "update:nested": "node scripts/update-nested.mjs",
-    // モデルを public/models/ に置く (取得した配布物は .cache/ に残る)
-    "models": "npm run fetch-models",
 
     // ---- 開発 ----
     "dev": "npm run dev",
     "build": "npm run build",
     "preview": "npm run preview",
-    // dsp/ をビルドして src/dsp.wasm を作り直す。DSP を変えたら結果もコミットする
-    "wasm": "npm run build:wasm",
 
     // ---- 確認 ----
     "lint": "npm run lint",
-    "test": "cargo test --release --manifest-path dsp/Cargo.toml",
     // コミット前にまとめて通す。書き換えはしない
     "check": [
         "todo lint",
-        "todo test",
         "todo build"
     ],
 

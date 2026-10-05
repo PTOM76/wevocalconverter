@@ -1,238 +1,55 @@
 /**
- * WeVocalExtractor: 曲からボーカル（または伴奏）を取り出す。UI を持たず、React にも依存しない（docs/DESIGN.md。画面は app/）。
- * 受け渡しはチャンネルごとの Float32Array とサンプルレートだけ。推論は専用の Worker で行う。
+ * WeVocalConverter: 音声ファイルの形式を変換する（UI を持たず、React にも依存しない。画面は app/）。
+ * 読み込みと書き出しは wevocal-lib（WeVocalSynth の書き出しと同じ部品）。形式を増やすときは、エンコーダーとデコーダーをここに置く
  */
-import { GPU_FALLBACK, type Backend, type HighBand, type MdxParams, type Runtime, type Stem, type WorkerRequest, type WorkerResponse } from './types'
+import { EXPORT_EXT, MP3_SAMPLE_RATES, OPUS_SAMPLE_RATE, decodeFile, exportAudio, type ExportFormat, type WavFormat } from 'wevocal-lib'
 
-export type { Backend, HighBand, MdxParams, Runtime, Stem }
+export type { ExportFormat, WavFormat } from 'wevocal-lib'
 
-/** モデル（Spleeter 2stems）のサンプルレート */
-const MODEL_RATE = 44100
-
-export interface ExtractorOptions {
-  /** Spleeter のボーカル用・伴奏用のモデル（ONNX）。`mdx` を渡すときは使わない */
-  vocals?: ArrayBuffer
-  accompaniment?: ArrayBuffer
-  /** UVR の MDX-Net のモデル（ONNX）と、モデルごとの値（docs/MODELS.md） */
-  mdx?: { model: ArrayBuffer; params: MdxParams }
-  backend: Backend
-  /** ONNX Runtime の wasm のメモリの上限（MB）。既定は `DEFAULT_MEMORY_MB`。変えると推論の Worker を作り直す */
-  memoryMb?: number
-  /** 手放してから推論の Worker を止めるまでの時間（ミリ秒）。既定は `IDLE_MS`。0 ならすぐ止めてメモリを返す（メモリの少ない端末向け） */
-  keepAliveMs?: number
-  /**
-   * 読み込む ONNX Runtime。省くと、WebGPU なら gpu（WebGPU 対応版）、CPU なら cpu（WASM 版）。
-   * gpu は CPU でも動くので、WebGPU で作れずに CPU で作り直すときは gpu のままでよい（Worker を作り直さずに済む）
-   */
-  runtime?: Runtime
-  /** その wasm の場所（追加機能として別の場所に置くとき。省くと同じ場所） */
-  wasmUrl?: string
-  /**
-   * WebGPU の推論に失敗したとき（出力が 0 や NaN のときも）、CPU に切り替える前に呼ぶ。`reason` は理由。
-   * 真を返したら CPU で作り直してその曲をやり直し、偽なら中断（AbortError）。省くと尋ねずに CPU に切り替える
-   */
-  onGpuFallback?: (reason: string) => Promise<boolean>
-  /** WebGPU のデバイスが失われたときに呼ぶ（`message` は理由）。ブラウザの再起動を勧めるのに使う */
-  onGpuDeviceLost?: (message: string) => void
-}
-
-/** ONNX Runtime の wasm のメモリの上限の既定（MB）。iOS は上限の分を予約の枠から差し引くので、4GB（元の値）より下げる */
-export const DEFAULT_MEMORY_MB = 1024
-
-export interface SeparateOptions {
-  stem: Stem
-  highBand?: HighBand
+/** 出力の設定 */
+export interface ConvertOptions {
+  format: ExportFormat
+  /** WAV のサンプル形式 */
+  wavFormat: WavFormat
+  /** MP3 / Opus のビットレート（kbps） */
+  kbps: number
+  /** 出力のサンプルレート。null なら元のまま（MP3 は扱える中で一番近いもの、Opus は常に 48kHz） */
+  sampleRate: number | null
+  /** モノラルにする */
+  mono: boolean
+  /** 進み具合（0〜1。読み込みが前半、書き出しが後半） */
   onProgress?: (p: number) => void
+  signal?: AbortSignal
 }
 
-export interface Extractor {
-  /** `channels`（`sampleRate` Hz）から `stem` の音を取り出す。結果は入力と同じサンプルレート・チャンネル数・長さ */
-  separate(channels: Float32Array[], sampleRate: number, opts: SeparateOptions): Promise<Float32Array[]>
-  /** ボーカルと伴奏の両方を取り出す（推論は1回なので、separate を2回呼ぶより速い） */
-  separateBoth(
-    channels: Float32Array[],
-    sampleRate: number,
-    opts: Omit<SeparateOptions, 'stem'>,
-  ): Promise<{ vocals: Float32Array[]; accompaniment: Float32Array[] }>
-  dispose(): void
+/** 変換の結果 */
+export interface ConvertResult {
+  blob: Blob
+  /** 出力の拡張子（.wav など） */
+  ext: string
 }
 
-/** `channels` を `to` Hz の `outCh` チャンネルに変換する（ブラウザの OfflineAudioContext を使う） */
-async function convert(channels: Float32Array[], from: number, to: number, outCh: number): Promise<Float32Array[]> {
-  if (from === to && channels.length === outCh) return channels
-  const n = channels[0].length
-  const ctx = new OfflineAudioContext(outCh, Math.max(1, Math.round((n * to) / from)), to)
-  const buf = ctx.createBuffer(channels.length, n, from)
-  channels.forEach((c, i) => buf.copyToChannel(c as Float32Array<ArrayBuffer>, i))
-  const src = ctx.createBufferSource()
-  src.buffer = buf
-  // モノラル → ステレオは同じ音を両方に入れる（既定のアップミックス）。ステレオ → モノラルは平均
-  src.connect(ctx.destination)
-  src.start()
-  const out = await ctx.startRendering()
-  return Array.from({ length: outCh }, (_, i) => out.getChannelData(i))
+/** 実際に書き出すサンプルレート */
+export function outputRate(format: ExportFormat, source: number, wanted: number | null): number {
+  if (format === 'opus') return OPUS_SAMPLE_RATE
+  const rate = wanted ?? source
+  if (format === 'mp3') return MP3_SAMPLE_RATES.reduce((a, b) => (Math.abs(b - rate) < Math.abs(a - rate) ? b : a))
+  return rate
 }
 
-type Pending = { resolve: (r: WorkerResponse) => void; reject: (e: Error) => void; onProgress?: (p: number) => void }
-type Shared = { worker: Worker; pending: Map<number, Pending>; nextId: number; owner: object | null; memoryMb: number; runtime: Runtime; idle: number; onLost?: (message: string) => void }
-
-/** 使い終わってから推論の Worker を止めるまでの時間（ミリ秒）の既定。続けて使うときは作り直さない */
-export const IDLE_MS = 30_000
-
-/**
- * 推論の Worker（ページで1つ）。手放しても `IDLE_MS` のあいだは止めずに、次の createExtractor で使い回す。
- * iOS は共有メモリ（ONNX Runtime が作る）の上限の分を予約の枠から差し引き、止めた Worker の分はすぐには返らない。
- * 使わなくなったら止めて、増えた wasm のメモリ（縮まない）を返す
- */
-let shared: Shared | null = null
-
-/** Worker を止める。処理中の要求は `reason` で失敗させる */
-function drop(s: Shared, reason: Error) {
-  clearTimeout(s.idle)
-  s.worker.terminate()
-  s.pending.forEach((p) => p.reject(reason))
-  s.pending.clear()
-  if (shared === s) shared = null
-}
-
-function sharedWorker(memoryMb: number, runtime: Runtime) {
-  // メモリの上限と、読み込む ONNX Runtime（WebGPU 対応版か WASM 版か。worker.ts）は Worker で最初に準備したときに決まるので、変えたら作り直す。
-  if (shared && (shared.memoryMb !== memoryMb || shared.runtime !== runtime)) drop(shared, new DOMException('disposed', 'AbortError'))
-  if (shared) {
-    clearTimeout(shared.idle)
-    return shared
-  }
-  const worker = new Worker(new URL('./worker.ts', import.meta.url), { type: 'module' })
-  const s: Shared = { worker, pending: new Map(), nextId: 1, owner: null, memoryMb, runtime, idle: 0 }
-  worker.onmessage = (e: MessageEvent<WorkerResponse>) => {
-    if ('deviceLost' in e.data) return s.onLost?.(e.data.deviceLost)
-    const p = s.pending.get(e.data.id)
-    if (!p) return
-    if ('progress' in e.data) return p.onProgress?.(e.data.progress)
-    s.pending.delete(e.data.id)
-    if ('error' in e.data) p.reject(new Error(e.data.error))
-    else p.resolve(e.data)
-  }
-  // Worker が落ちたら、次は作り直す
-  worker.onerror = (e) => drop(s, new Error(e.message || 'extractor worker error'))
-  return (shared = s)
-}
-
-/** 抽出の実行環境が使われているか（作ってから手放すまで）。使われている間は、診断などで作らない */
-export const extractorBusy = () => !!shared?.owner
-
-/** 実行環境を作る。前に作ったものは使えなくなる（Worker は1つで、モデルを入れ替える） */
-export async function createExtractor(opts: ExtractorOptions): Promise<Extractor> {
-  const model =
-    opts.mdx
-      ? ({ kind: 'mdx', model: opts.mdx.model, params: opts.mdx.params } as const)
-      : opts.vocals && opts.accompaniment
-        ? ({ kind: 'spleeter', vocals: opts.vocals, accompaniment: opts.accompaniment } as const)
-        : null
-  if (!model) throw new Error('model is required')
-  const memoryMb = opts.memoryMb ?? DEFAULT_MEMORY_MB
-  const runtime = opts.runtime ?? (opts.backend === 'webgpu' ? 'gpu' : 'cpu')
-  const s = sharedWorker(memoryMb, runtime)
-  /** この実行環境が送った要求の id */
-  const mine = new Set<number>()
-  let disposed = false
-  // Worker のモデルの持ち主。あとから作ったものに入れ替わっていたら、手放すときに Worker に触らない
-  const token = {}
-  s.owner = token
-  s.onLost = opts.onGpuDeviceLost
-  const send = (req: WorkerRequest, transfer: Transferable[], onProgress?: (p: number) => void) =>
-    new Promise<WorkerResponse>((resolve, reject) => {
-      if (disposed) return reject(new DOMException('disposed', 'AbortError'))
-      mine.add(req.id)
-      const done = () => mine.delete(req.id)
-      s.pending.set(req.id, { resolve: (r) => (done(), resolve(r)), reject: (e) => (done(), reject(e)), onProgress })
-      s.worker.postMessage(req, transfer)
-    })
-
-  // モデルは Worker に移すので、呼び出し元の ArrayBuffer は使えなくなる
-  try {
-    await send(
-      { kind: 'init', id: s.nextId++, model, backend: opts.backend, memoryMb, runtime, wasmUrl: opts.wasmUrl, askFallback: !!opts.onGpuFallback },
-      model.kind === 'mdx' ? [model.model] : [model.vocals, model.accompaniment],
-    )
-  } catch (e) {
-    // ONNX Runtime は wasm の準備に一度失敗すると、同じ Worker では二度と準備できない
-    // （previous call to initWasm() failed）。次は新しい Worker で作る
-    if (s.owner === token) s.owner = null
-    drop(s, new DOMException('disposed', 'AbortError'))
-    throw e
-  }
-
-  /** `stems` の音を、入力と同じサンプルレート・チャンネル数・長さで返す */
-  const run = async (channels: Float32Array[], sampleRate: number, stems: Stem[], o: Omit<SeparateOptions, 'stem'>) => {
-    const n = channels[0].length
-    const input = await convert(channels, sampleRate, MODEL_RATE, 2)
-    const once = () => {
-      // Worker に移すので、毎回複製する（GPU で失敗したらやり直すため、変換した入力も残しておく）
-      const owned = input.map((c) => c.slice())
-      return send({ kind: 'separate', id: s.nextId++, channels: owned, stems, highBand: o.highBand ?? 'zeros' }, owned.map((c) => c.buffer), o.onProgress)
-    }
-    let res: WorkerResponse
-    try {
-      res = await once()
-    } catch (e) {
-      // GPU で処理できなかった。確かめてから CPU で作り直し、最初からやり直す
-      const msg = String(e)
-      const at = msg.indexOf(GPU_FALLBACK)
-      if (at < 0 || !opts.onGpuFallback) throw e
-      if (!(await opts.onGpuFallback(msg.slice(at + GPU_FALLBACK.length)))) throw new DOMException('cancelled', 'AbortError')
-      await send({ kind: 'useCpu', id: s.nextId++ }, [])
-      res = await once()
-    }
-    if (!('stems' in res)) throw new Error('unexpected response')
-    // 1 つずつ変換する（同時に行うと、変換の途中の複製が音の数だけ重なり、iOS でタブが落ちた）
-    const out: Float32Array[][] = []
-    for (let i = 0; i < res.stems.length; i++) {
-      const back = await convert(res.stems[i], MODEL_RATE, sampleRate, channels.length)
-      // 変換前のものは、もう要らない
-      res.stems[i] = []
-      // サンプルレートの変換で 1 サンプル程度ずれることがあるので、入力と同じ長さにそろえる
-      out.push(
-        back.map((c) => {
-          if (c.length === n) return c
-          const o2 = new Float32Array(n)
-          o2.set(c.subarray(0, n))
-          return o2
-        }),
-      )
-    }
-    return out
-  }
-
-  return {
-    async separate(channels, sampleRate, o) {
-      const [one] = await run(channels, sampleRate, [o.stem], o)
-      return one
-    },
-    async separateBoth(channels, sampleRate, o) {
-      const [vocals, accompaniment] = await run(channels, sampleRate, ['vocals', 'accompaniment'], o)
-      return { vocals, accompaniment }
-    },
-    dispose() {
-      if (disposed) return
-      disposed = true
-      if (s.owner !== token) return
-      s.owner = null
-      if (mine.size) {
-        // 処理中なら Worker ごと止める（すぐに止まる。処理中の separate は失敗する）
-        drop(s, new DOMException('disposed', 'AbortError'))
-        return
-      }
-      // すぐ止める設定なら止める（抽出で増えたメモリを、結果を使う処理より先に返す）
-      const keep = opts.keepAliveMs ?? IDLE_MS
-      if (keep <= 0) {
-        drop(s, new DOMException('disposed', 'AbortError'))
-        return
-      }
-      // セッションを手放し、しばらく使われなければ Worker を止める
-      s.worker.postMessage({ kind: 'release', id: s.nextId++ } satisfies WorkerRequest)
-      clearTimeout(s.idle)
-      s.idle = window.setTimeout(() => !s.owner && drop(s, new DOMException('disposed', 'AbortError')), keep)
-    },
-  }
+/** `file` を読み込み、設定の形式で書き出す */
+export async function convert(file: File, o: ConvertOptions): Promise<ConvertResult> {
+  o.signal?.throwIfAborted()
+  // 読み込みの進み具合は、読み終わると -1 が来る（デコード中）
+  const clip = await decodeFile(file, (p) => p >= 0 && o.onProgress?.(p * 0.5))
+  o.signal?.throwIfAborted()
+  o.onProgress?.(0.5)
+  const blob = await exportAudio(
+    clip,
+    { format: o.format, wavFormat: o.wavFormat, kbps: o.kbps, sampleRate: outputRate(o.format, clip.sampleRate, o.sampleRate), mono: o.mono, range: null },
+    (p) => o.onProgress?.(0.5 + p * 0.5),
+  )
+  o.signal?.throwIfAborted()
+  o.onProgress?.(1)
+  return { blob, ext: EXPORT_EXT[o.format] }
 }

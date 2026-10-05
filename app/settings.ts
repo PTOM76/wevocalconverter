@@ -2,12 +2,9 @@ import { useState } from 'react'
 import type { ExportFormat, WavFormat } from 'wevocal-lib'
 import type { WindowMode } from 'pevenmui'
 import type { LangSetting } from './i18n'
-import type { ModelKind } from './models'
 import type { KeepMode } from './persist'
 
 export type ThemeSetting = 'system' | 'light' | 'dark'
-/** 抽出するもの */
-export type StemsSetting = 'both' | 'vocals' | 'accompaniment'
 
 /** アプリの設定（localStorage に保存する） */
 export interface Settings {
@@ -15,27 +12,23 @@ export interface Settings {
   language: LangSetting
   /** 画面の大きさ（倍率。文字や入力欄などをまとめて拡大縮小する） */
   uiScale: number
-  model: ModelKind
-  /** GPU（WebGPU）を使ってよいか */
-  gpu: boolean
-  stems: StemsSetting
   /** 書き出す形式と、WAV のサンプル形式・MP3 / Opus のビットレート（kbps） */
   format: ExportFormat
   wavFormat: WavFormat
   kbps: number
-  /** 約 11kHz より上を残す（モデルが扱わない帯域） */
-  highBand: boolean
+  /** 出力のサンプルレート。0 なら元のまま */
+  sampleRate: number
+  /** モノラルにする */
+  mono: boolean
   /** 閉じたあとも一覧を残すか（none: 残さない、undownloaded: ダウンロードしていない結果だけ、all: ダウンロードした結果も） */
   keepQueue: KeepMode
   /** ダイアログの出し方。auto は PWA かつ Chromium 系ならポップアップ、ほかはダイアログ。別窓を開けなければダイアログ */
   dialogWindow: WindowMode | 'auto'
-  /** 抽出の実行環境の wasm のメモリの上限（MB）。iOS は上限の分を予約の枠から差し引くので、抽出できなければ下げる */
-  memoryMb: number
   /** 開発版の更新（バージョンが同じでコミットだけ違う版）も知らせる */
   devUpdates: boolean
 }
 
-export const DEFAULT_SETTINGS: Settings = { theme: 'system', language: 'auto', uiScale: 1, model: 'int8', stems: 'both', format: 'wav', wavFormat: 'pcm16', kbps: 192, gpu: true, highBand: false, dialogWindow: 'auto', keepQueue: 'undownloaded', memoryMb: 1024, devUpdates: false }
+export const DEFAULT_SETTINGS: Settings = { theme: 'system', language: 'auto', uiScale: 1, format: 'mp3', wavFormat: 'pcm16', kbps: 192, sampleRate: 0, mono: false, dialogWindow: 'auto', keepQueue: 'undownloaded', devUpdates: false }
 
 const KEY = 'wevocalconverter.settings'
 

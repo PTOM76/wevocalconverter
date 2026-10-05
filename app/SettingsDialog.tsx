@@ -4,16 +4,10 @@ import { Check, Choice, Group, LANG_NAMES, Row, SettingsDialog as PevenSettingsD
 import { UpdateSection } from 'pevenmui/pwa'
 import type { WavFormat } from 'wevocal-lib'
 import { useT, type LangSetting, type MessageKey } from './i18n'
-import Diagnose from './Diagnose'
-import { clearModels } from './models'
-import { backendAllowed } from '../src/compat'
 import { clearQueue, queueSize, type KeepMode } from './persist'
 import { DEFAULT_SETTINGS, type Settings, type ThemeSetting } from './settings'
 
-type Category = 'general' | 'extract' | 'data' | 'debug'
-
-/** 抽出の実行環境のメモリの上限の選択肢（MB） */
-const MEMORY_MB = [256, 512, 1024, 2048, 4096]
+type Category = 'general' | 'convert' | 'data' | 'debug'
 
 /** 画面の大きさの選択肢（倍率） */
 const UI_SCALES = [0.9, 1, 1.1, 1.25, 1.5]
@@ -21,9 +15,9 @@ const UI_SCALES = [0.9, 1, 1.1, 1.25, 1.5]
 /** 設定の検索の対象: 分類ごとのグループ名・項目名・説明文の訳文キー。項目を足したらここにも足す */
 const INDEX: Record<Category, MessageKey[]> = {
   general: ['settings.groupAppearance', 'settings.theme', 'settings.language', 'settings.uiScale', 'settings.uiScaleHelp', 'settings.groupUpdate'],
-  extract: ['settings.groupExport', 'settings.wavFormat', 'settings.kbps', 'settings.groupExtract', 'settings.gpu', 'settings.gpuHelp', 'settings.highBand', 'settings.highBandHelp', 'settings.memory', 'settings.memoryHelp'],
-  data: ['settings.groupData', 'data.models', 'data.modelsHelp', 'data.queue', 'settings.keepQueue', 'settings.keepQueueHelp'],
-  debug: ['settings.groupDebug', 'settings.devUpdates', 'settings.devUpdatesHelp', 'settings.dialogWindow', 'settings.diagnose', 'settings.diagnoseHelp'],
+  convert: ['settings.groupExport', 'settings.wavFormat', 'settings.kbps'],
+  data: ['settings.groupData', 'data.queue', 'settings.keepQueue', 'settings.keepQueueHelp'],
+  debug: ['settings.groupDebug', 'settings.devUpdates', 'settings.devUpdatesHelp', 'settings.dialogWindow'],
 }
 
 interface Props {
@@ -67,7 +61,7 @@ function DataRow(p: { label: string; help: string; confirmMessage: string; onDel
   )
 }
 
-/** 保存したデータ（設定の「データ」）: モデルと、閉じたあとも残した一覧 */
+/** 保存したデータ（設定の「データ」）: 閉じたあとも残した一覧 */
 function DataSection({ notify }: { notify: (message: string) => void }) {
   const t = useT()
   // 残した一覧の大きさ（開いたとき・消したときに数え直す）
@@ -76,7 +70,6 @@ function DataSection({ notify }: { notify: (message: string) => void }) {
   const mb = queueBytes === null ? '…' : (queueBytes / 2 ** 20).toFixed(1)
   return (
     <>
-      <DataRow label={t('data.models')} help={t('data.modelsHelp')} confirmMessage={t('data.deleteConfirm')} onDelete={clearModels} notify={notify} />
       <DataRow
         label={t('data.queue')}
         help={t('data.queueHelp', { mb })}
@@ -144,8 +137,7 @@ export default function SettingsDialog({ open, onClose, settings, onChange, noti
             </Group>
           </>
         ),
-        extract: (
-          <>
+        convert: (
           <Group title={t('settings.groupExport')}>
             <Row label={t('settings.wavFormat')}>
               <Choice<WavFormat>
@@ -166,26 +158,6 @@ export default function SettingsDialog({ open, onClose, settings, onChange, noti
               />
             </Row>
           </Group>
-          <Group title={t('settings.groupExtract')}>
-            {/* GPU を使えないモデルでは押せなくし、理由を出す */}
-            <Check
-              checked={draft.gpu && backendAllowed(draft.model, 'webgpu')}
-              disabled={!backendAllowed(draft.model, 'webgpu')}
-              onChange={(v) => set({ gpu: v })}
-              label={t('settings.gpu')}
-              help={backendAllowed(draft.model, 'webgpu') ? t('settings.gpuHelp') : t('settings.gpuUnsupported')}
-            />
-            <Check checked={draft.highBand} onChange={(v) => set({ highBand: v })} label={t('settings.highBand')} help={t('settings.highBandHelp')} />
-            {/* 抽出の動きを変える設定なので、開発者向けではなくここに置く（iPad などで抽出できないときに下げる） */}
-            <Row label={t('settings.memory')} help={t('settings.memoryHelp')}>
-              <Choice<string>
-                value={String(draft.memoryMb)}
-                onChange={(v) => set({ memoryMb: Number(v) })}
-                options={MEMORY_MB.map((mb): [string, string] => [String(mb), mb < 1024 ? `${mb} MB` : `${mb / 1024} GB`])}
-              />
-            </Row>
-          </Group>
-          </>
         ),
         data: (
           <Group title={t('settings.groupData')}>
@@ -222,7 +194,6 @@ export default function SettingsDialog({ open, onClose, settings, onChange, noti
               />
             </Row>
             <Check checked={draft.devUpdates} onChange={(v) => set({ devUpdates: v })} label={t('settings.devUpdates')} help={t('settings.devUpdatesHelp')} />
-            <Diagnose memoryMb={draft.memoryMb} />
           </Group>
         ),
       })}
