@@ -1,22 +1,22 @@
 # WeVocalConverter
-WeVocalConverterは、Webブラウザ上で声を別の声質に変換するためのツールである（準備中）。
+WeVocalConverterは、Webブラウザ上で音声ファイルの形式（WAV、MP3 など）を変換するためのツールである。
 
 音声ファイルはサーバーへ送らず、処理はすべてブラウザ内で行う。<br />
-画面を持たないライブラリとしても使え、[WeVocalSynth](https://github.com/PTOM76/wevocalsynth) から追加機能として使う予定。
+画面を持たないライブラリとしても使える。
 
 ## 今の状態
-[WeVocalExtractor](https://github.com/PTOM76/wevocalextractor) を写して始めた土台。変換の方式はまだ決めていないので、中身は今のところ Extractor と同じ（曲からボーカルと伴奏を取り出す）。
+[WeVocalExtractor](https://github.com/PTOM76/wevocalextractor) を写して始めた土台。中身は今のところ Extractor と同じ（曲からボーカルと伴奏を取り出す）で、これから形式の変換に置き換える。
 
-- 使い続けるもの: ライブラリ（`src/`、UI なし）と画面（`app/`）の分け方、キュー、モデルの取得と保存、診断、PWA
-- 置き換えるもの: `src/` の抽出の処理、`dsp/`、`app/` の抽出の設定とモデルの一覧
+- 使い続けるもの: ライブラリ（`src/`、UI なし）と画面（`app/`）の分け方、複数のファイルを並べて順に処理するキュー、曲ごとの保存と ZIP でのまとめての保存、PWA
+- 置き換えるもの: `src/` の抽出の処理、`app/` の抽出の設定
+- 要らなくなるもの: モデル（ONNX）、`dsp/`、診断
 - 進め方は [docs/PLAN.md](docs/PLAN.md)。`docs/` のほかの文書は、写した抽出の処理の説明
 
 ## 技術スタック
 | 項目 | 内容 |
 | --- | --- |
 | 画面 | React + TypeScript + MUI（[PevenMUI](https://github.com/PTOM76/pevenmui)、Vite） |
-| 推論 | ONNX Runtime Web（Web Worker で実行） |
-| 信号処理 | Rust → WebAssembly（[wevocal-lib](https://github.com/PTOM76/wevocal-lib) を使う） |
+| 読み込みと書き出し | [wevocal-lib](https://github.com/PTOM76/wevocal-lib)（WeVocalSynth の書き出しと同じ部品。MP3 は lamejs、Opus は WebCodecs） |
 
 ## 開発
 ```sh

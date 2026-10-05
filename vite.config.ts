@@ -91,7 +91,7 @@ export default defineConfig({
       manifest: {
         name: 'WeVocalConverter',
         short_name: 'WeVocalConverter',
-        description: '声を別の声質に変換する Web ツール',
+        description: '音声ファイルの形式を変換する Web ツール',
         lang: 'ja',
         display: 'standalone',
         background_color: '#ffffff',

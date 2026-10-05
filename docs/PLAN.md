@@ -1,20 +1,25 @@
 # 進め方
 
-WeVocalConverter を、Extractor を写した土台から声の変換のツールにしていく手順。(2026-10-05)
+WeVocalConverter を、Extractor を写した土台から音声ファイルの形式の変換のツールにしていく手順。(2026-10-05)
 
 ## 1. 方針
 - Extractor と同じく、UI なしのライブラリ（`src/`、`exports: ./src/index.ts`）と画面（`app/`）に分ける
-- WeVocalSynth からは追加機能として使う。ライブラリをビルドして配り、使う直前に導入する。Synth では、選択範囲やトラックの「声を変換」から呼び、結果は新しいトラックにする
-- 入力は声だけの音声を想定する。曲のときは Extractor で先に声を取り出す（追加機能の `requires`）
+- 読み込み（`decodeFile`）と書き出し（`exportAudio`）は wevocal-lib のもの（WeVocalSynth の書き出しと同じ）を使う
+- 複数のファイルを並べて順に変換し、1 つずつ、または ZIP でまとめて保存する（Extractor のキューと ZIP を使い続ける）
 - 音声は外部に送らない
 
-## 2. 手順
-1. 変換の方式を調べる（RVC 系の ONNX、話者の埋め込み、F0 の抽出に何を使うか、ブラウザで動く速さか、モデルのライセンス）。`docs/RESEARCH.md` に書く
-2. ライブラリの API を決める（案: `createConverter(options)` → `convert(clip, { target, pitchShift })`。進み具合、中止、エラーの型は Extractor とそろえる）
-3. `src/` と `dsp/` を変換の処理に置き換える。キュー、モデルの保存、診断は使い続ける
-4. `app/` の設定とモデルの一覧を変換のものにする
-5. WeVocalSynth に submodule として足し、追加機能として登録する
+## 2. できるようにすること
+| 項目 | 内容 |
+| --- | --- |
+| 入力 | ブラウザで読めるもの（WAV、AIFF、MP3、M4A、FLAC、OGG、Opus、WebM など。wevocal-lib の `AUDIO_ACCEPT`） |
+| 出力 | WAV（16 / 24bit、32bit float）、MP3、Opus |
+| 設定 | サンプルレート、ビットレート（MP3、Opus）、モノラルにする |
 
-## 3. 共通の部品
-- キューの一覧（`QueueList`、`useQueue`）とモデルの取得の画面は、Extractor と共通にする（PevenMUI へ）。取得と保存の処理は wevocal-lib/web へ
-- それまでは、写したものをそのまま使う
+## 3. 手順
+1. ライブラリ: `convert(file, options)` → `Blob`（`decodeFile` と `exportAudio` をつなぐ）。進み具合と中止は Extractor とそろえる
+2. 画面: 抽出の設定（モデル、取り出すもの）を、出力の形式、サンプルレート、ビットレート、モノラルに置き換える。キュー、試聴、保存、ZIP はそのまま
+3. 要らないものを消す: モデル（`app/models.ts`、`scripts/fetch-models.mjs`）、ONNX Runtime、`dsp/`、`src/` の抽出の処理、診断、抽出の docs
+4. 出力の形式を足すか決める（FLAC、AAC など。ブラウザで作れるか調べる）
+
+## 4. 決めること
+- WeVocalSynth から追加機能として使うか（Synth の書き出しは同じ wevocal-lib の部品を使っているので、今のところ要らない見込み）
