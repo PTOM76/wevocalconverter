@@ -3,6 +3,8 @@ import type { VideoWave, WaveBox } from './draw'
 
 type Painter = (ctx: OffscreenCanvasRenderingContext2D, time: number) => void
 
+/** その瞬間の波形で、画面の幅に入れる長さ（秒） */
+const SCOPE_SECONDS = 0.04
 /** 流れる波形で、画面の幅に入れる長さ（秒） */
 const SCROLL_SECONDS = 6
 /** 音量の棒の数と、FFT の大きさ */
@@ -85,6 +87,43 @@ function scroll(clip: Clip, wave: VideoWave, box: WaveBox): Painter {
     drawColumns(ctx, box, peaks, at, box.left + half, box.width - half)
     ctx.fillStyle = wave.playedColor
     ctx.fillRect(box.left + half - 1, box.top, 2, box.height)
+  }
+}
+
+/**
+ * その瞬間の波形（オシロスコープ）。再生位置の前後 40ms を線で描く。
+ * 毎フレーム同じ位相から描くよう、再生位置の近くで負から正へ変わるところに合わせる（合わせないと線が左右に揺れて見にくい）
+ */
+function scope(clip: Clip, wave: VideoWave, box: WaveBox): Painter {
+  const len = clip.channels[0].length
+  const span = Math.round(SCOPE_SECONDS * clip.sampleRate)
+  const mono = (i: number) => {
+    if (i < 0 || i >= len) return 0
+    let v = 0
+    for (const ch of clip.channels) v += ch[i]
+    return v / clip.channels.length
+  }
+  const mid = box.top + box.height / 2
+  const half = box.height / 2
+  return (ctx, time) => {
+    let start = Math.round(time * clip.sampleRate) - Math.floor(span / 2)
+    // 半分の幅の中で、最初に負から正へ変わるところを探す（なければそのまま）
+    for (let i = start; i < start + span / 2; i++) {
+      if (mono(i - 1) < 0 && mono(i) >= 0) {
+        start = i - Math.floor(span / 4)
+        break
+      }
+    }
+    ctx.strokeStyle = wave.playedColor
+    ctx.lineWidth = Math.max(2, box.height / 80)
+    ctx.lineJoin = 'round'
+    ctx.beginPath()
+    for (let x = 0; x <= box.width; x++) {
+      const y = mid - Math.max(-1, Math.min(1, mono(start + Math.round((x / box.width) * span)))) * half
+      if (x === 0) ctx.moveTo(box.left, y)
+      else ctx.lineTo(box.left + x, y)
+    }
+    ctx.stroke()
   }
 }
 
@@ -180,6 +219,7 @@ function bars(clip: Clip, wave: VideoWave, box: WaveBox, fps: number): Painter {
 
 /** 波形の種類ごとの描き方 */
 export function createWavePainter(clip: Clip, wave: VideoWave, box: WaveBox, fps: number): Painter {
+  if (wave.style === 'scope') return scope(clip, wave, box)
   if (wave.style === 'scroll') return scroll(clip, wave, box)
   if (wave.style === 'bars') return bars(clip, wave, box, fps)
   return overview(clip, wave, box)

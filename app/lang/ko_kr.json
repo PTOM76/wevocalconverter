@@ -123,5 +123,6 @@
   "video.style": "파형",
   "video.styleOverview": "전체와 재생 위치",
   "video.styleScroll": "흐르는 파형",
-  "video.styleBars": "음량 막대"
+  "video.styleBars": "음량 막대",
+  "video.styleScope": "순간 파형"
 }

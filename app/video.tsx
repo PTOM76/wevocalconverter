@@ -56,6 +56,7 @@ const SIZE_OPTIONS: [VideoSize, MessageKey][] = [
   ['1080x1080', 'video.sizeSquare'],
 ]
 const STYLE_OPTIONS: [Settings['videoWaveStyle'], MessageKey][] = [
+  ['scope', 'video.styleScope'],
   ['overview', 'video.styleOverview'],
   ['scroll', 'video.styleScroll'],
   ['bars', 'video.styleBars'],

@@ -10,8 +10,8 @@ export interface VideoBackground {
   fit: 'cover' | 'contain'
 }
 
-/** 波形の種類。overview: 全体の波形と再生位置の線、scroll: 再生位置の周りの波形が流れる、bars: 音量の棒（周波数ごと） */
-export type WaveStyle = 'overview' | 'scroll' | 'bars'
+/** 波形の種類。scope: その瞬間の波形（オシロスコープ）、overview: 全体の波形と再生位置の線、scroll: 再生位置の周りの波形が流れる、bars: 音量の棒（周波数ごと） */
+export type WaveStyle = 'scope' | 'overview' | 'scroll' | 'bars'
 
 /** 波形の見た目 */
 export interface VideoWave {

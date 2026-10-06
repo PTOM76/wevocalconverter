@@ -123,5 +123,6 @@
   "video.style": "Waveform",
   "video.styleOverview": "Overview",
   "video.styleScroll": "Scrolling",
-  "video.styleBars": "Bars"
+  "video.styleBars": "Bars",
+  "video.styleScope": "Oscilloscope"
 }
