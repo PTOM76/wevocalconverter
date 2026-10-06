@@ -2,13 +2,13 @@ import { useEffect, useState } from 'react'
 import { Box, Button, Link, MenuItem, Paper, Select, Snackbar, Stack, Typography, useColorScheme } from '@mui/material'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faDownload, faFileArrowUp, faFolderOpen, faPlus } from '@fortawesome/free-solid-svg-icons'
-import { AboutDialog, AppHeader, LicensesDialog, PevenLabels, ShortcutsDialog, LABELS, useFilesDrop, useFilesPicker, setUiScale, FULL_HEIGHT, useLeaveGuard, useMobileLayout, WindowModeContext, autoWindowMode, type MenuGroup } from 'pevenmui'
+import { AboutDialog, AppHeader, LicensesDialog, PevenLabels, ShortcutsDialog, useFilesDrop, useFilesPicker, setUiScale, FULL_HEIGHT, useLeaveGuard, useMobileLayout, WindowModeContext, autoWindowMode, type MenuGroup } from 'pevenmui'
 import { UpdatePrompt, checkForUpdate, formatBuild, promptUpdate } from 'pevenmui/pwa'
 import { configureFileAccess } from 'pevenmui/web'
 import { AUDIO_ACCEPT, downloadBlob, type ExportFormat } from 'wevocal-lib'
 import { openExternal, USER_GUIDE_URL } from './links'
 import { licenseEntries } from './licenses'
-import { LangContext, resolveLang, setLang, t, type MessageKey } from './i18n'
+import { i18n, LangContext, resolveLang, setLang, t, type MessageKey } from './i18n'
 import { QueueList } from './QueueList'
 import SettingsDialog from './SettingsDialog'
 import { useSettings } from './settings'
@@ -128,7 +128,7 @@ export default function App() {
   const checkUpdate = () =>
     void checkForUpdate().then((r) => {
       if (r.kind === 'found') return promptUpdate(r.build)
-      const l = LABELS[lang]
+      const l = i18n.labels(lang)
       setToast({ latest: l.updateLatest, unsupported: l.updateUnsupported, failed: l.updateFailed }[r.kind])
     })
   const runEntries = [
@@ -186,7 +186,7 @@ export default function App() {
   ]
   return (
     <LangContext.Provider value={lang}>
-      <PevenLabels.Provider value={LABELS[lang]}>
+      <PevenLabels.Provider value={i18n.labels(lang)}>
       <WindowModeContext.Provider value={settings.dialogWindow === 'auto' ? autoWindowMode() : settings.dialogWindow}>
         <Box sx={{ height: FULL_HEIGHT, display: 'flex', flexDirection: 'column', overflow: 'hidden', bgcolor: 'background.default' }}>
           <AppHeader title="WeVocalConverter" icon={<AppIcon size={16} />} menus={mobile ? mobileMenus : menus} />
