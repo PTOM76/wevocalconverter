@@ -16,5 +16,6 @@ export const licenseEntries = (repository: string): LicenseEntry[] => [
   { name: 'Font Awesome Free', license: 'CC BY 4.0 / MIT', url: 'https://fontawesome.com/license/free', note: t('licenses.icons') },
   { name: 'Roboto', license: 'OFL-1.1', url: 'https://fontsource.org/fonts/roboto', note: t('licenses.font') },
   { name: 'lamejs', license: 'LGPL-3.0', url: 'https://github.com/nicktindall/lamejs', note: t('licenses.mp3') },
+  { name: 'Mediabunny', license: 'MPL-2.0', url: 'https://github.com/Vanilagy/mediabunny', note: t('licenses.video') },
   { name: 'Workbox', license: 'MIT', url: 'https://github.com/GoogleChrome/workbox', note: t('licenses.pwa') },
 ]

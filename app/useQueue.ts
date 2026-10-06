@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
-import { convert } from '../src/index'
+import { convert, convertVideo, type ConvertResult } from '../src/index'
 import type { Settings } from './settings'
+import { isVideo, videoLook } from './video'
 import { clearQueue, loadQueue, putItem, signature, toStored } from './persist'
 
 /** `cancelled` はその曲だけ中止したもの（保存するときは待機中として残す） */
@@ -25,7 +26,7 @@ export interface QueueItem {
 let nextId = 1
 
 /** 複数の曲を1曲ずつ順に変換する */
-export function useQueue(settings: Settings) {
+export function useQueue(settings: Settings, bgImage: ImageBitmap | null) {
   const [items, setItems] = useState<QueueItem[]>([])
   const [running, setRunning] = useState(false)
   const itemsRef = useRef(items)
@@ -114,15 +115,18 @@ export function useQueue(settings: Settings) {
         // 変換し直すときは、前の結果のダウンロード済みの印も消す
         patch(item.id, { status: 'running', progress: 0, error: undefined, saved: undefined })
         try {
-          const r = await convert(item.file, {
-            format: settings.format,
-            wavFormat: settings.wavFormat,
-            kbps: settings.kbps,
-            sampleRate: settings.sampleRate || null,
-            mono: settings.mono,
-            onProgress: (p) => patch(item.id, { progress: p }),
-            signal: one.signal,
-          })
+          const common = { onProgress: (p: number) => patch(item.id, { progress: p }), signal: one.signal }
+          const format = settings.format
+          const r: ConvertResult = isVideo(format)
+            ? await convertVideo(item.file, { ...videoLook(settings, bgImage, item.file.name), container: format, fps: 30, kbps: settings.kbps, ...common })
+            : await convert(item.file, {
+                format,
+                wavFormat: settings.wavFormat,
+                kbps: settings.kbps,
+                sampleRate: settings.sampleRate || null,
+                mono: settings.mono,
+                ...common,
+              })
           patch(item.id, { status: 'done', progress: 1, result: r.blob, ext: r.ext })
         } catch (e) {
           // 一覧ごと中止したときは待機中に戻す（もう一度「すべて変換」で続きから）。その曲だけ中止したら中止にして次へ

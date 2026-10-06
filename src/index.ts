@@ -53,3 +53,16 @@ export async function convert(file: File, o: ConvertOptions): Promise<ConvertRes
   o.onProgress?.(1)
   return { blob, ext: EXPORT_EXT[o.format] }
 }
+
+import { VIDEO_EXT, renderVideo, type VideoOptions } from './video'
+
+/** `file` を読み込み、簡易な波形を付けた動画にする */
+export async function convertVideo(file: File, o: VideoOptions): Promise<ConvertResult> {
+  o.signal?.throwIfAborted()
+  const clip = await decodeFile(file, (p) => p >= 0 && o.onProgress?.(p * 0.2))
+  o.signal?.throwIfAborted()
+  const blob = await renderVideo(clip, { ...o, onProgress: (p) => o.onProgress?.(0.2 + p * 0.8) })
+  return { blob, ext: VIDEO_EXT[o.container] }
+}
+
+export { VIDEO_EXT, canEncodeVideo, renderVideo, type VideoBackground, type VideoContainer, type VideoLook, type VideoOptions, type VideoWave } from './video'

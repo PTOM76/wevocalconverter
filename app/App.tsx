@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
-import { Box, Button, Link, MenuItem, Paper, Select, Snackbar, Stack, Typography, useColorScheme } from '@mui/material'
+import { Box, Button, Link, Paper, Snackbar, Stack, Typography, useColorScheme } from '@mui/material'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faDownload, faFileArrowUp, faFolderOpen, faPlus } from '@fortawesome/free-solid-svg-icons'
 import { AboutDialog, AppHeader, LicensesDialog, PevenLabels, ShortcutsDialog, useFilesDrop, useFilesPicker, setUiScale, FULL_HEIGHT, useLeaveGuard, useMobileLayout, WindowModeContext, autoWindowMode, type MenuGroup } from 'pevenmui'
 import { UpdatePrompt, checkForUpdate, formatBuild, promptUpdate } from 'pevenmui/pwa'
 import { configureFileAccess } from 'pevenmui/web'
 import { AUDIO_ACCEPT, downloadBlob, type ExportFormat } from 'wevocal-lib'
+import type { VideoContainer } from '../src/index'
 import { openExternal, USER_GUIDE_URL } from './links'
 import { licenseEntries } from './licenses'
 import { i18n, LangContext, resolveLang, setLang, t, type MessageKey } from './i18n'
@@ -14,6 +15,8 @@ import SettingsDialog from './SettingsDialog'
 import { useSettings } from './settings'
 import { useQueue, type QueueItem } from './useQueue'
 import { makeZip } from './zip'
+import { OptionSelect } from './OptionSelect'
+import { VideoOptionsBar, isVideo, useBackgroundImage, useVideoSupport } from './video'
 import { app } from './appConfig'
 
 /** 今動いている版（バージョンとコミット） */
@@ -22,10 +25,12 @@ const APP_BUILD = formatBuild(__APP_VERSION__, __APP_COMMIT__)
 /** アプリのアイコン（public/icon.svg）。GitHub Pages ではサブパスで配信されるため BASE_URL から組み立てる */
 const AppIcon = ({ size }: { size: number }) => <img src={`${import.meta.env.BASE_URL}icon.svg`} alt="" width={size} height={size} style={{ display: 'block' }} />
 
-const FORMAT_OPTIONS: [ExportFormat, MessageKey][] = [
+const FORMAT_OPTIONS: [ExportFormat | VideoContainer, MessageKey][] = [
   ['wav', 'opt.formatWav'],
   ['mp3', 'opt.formatMp3'],
   ['opus', 'opt.formatOpus'],
+  ['webm', 'opt.formatWebm'],
+  ['mp4', 'opt.formatMp4'],
 ]
 /** サンプルレートの選択肢（0 は元のまま） */
 const RATE_OPTIONS: ['0' | '22050' | '32000' | '44100' | '48000', MessageKey][] = [
@@ -43,23 +48,6 @@ const CHANNEL_OPTIONS: ['original' | 'mono', MessageKey][] = [
 /** 拡張子を除いたファイル名 */
 const baseName = (name: string) => name.replace(/\.[^.]+$/, '')
 const outName = (item: QueueItem) => `${baseName(item.file.name)}${item.ext ?? '.wav'}`
-
-/** 操作の帯に置く選択欄（ラベル付き） */
-function OptionSelect<T extends string>(p: { label: string; value: T; disabled: boolean; options: [T, MessageKey][]; onChange: (v: T) => void; note?: string }) {
-  return (
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-      <Typography sx={{ fontSize: 13, color: 'text.secondary', whiteSpace: 'nowrap' }}>{p.label}</Typography>
-      <Select size="small" value={p.value} disabled={p.disabled} onChange={(e) => p.onChange(e.target.value as T)} sx={{ fontSize: 13, '& .MuiSelect-select': { py: 0.5 } }}>
-        {p.options.map(([v, k]) => (
-          <MenuItem key={v} value={v} sx={{ fontSize: 13 }}>
-            {t(k)}
-          </MenuItem>
-        ))}
-      </Select>
-      {p.note && <Typography sx={{ fontSize: 12, color: 'text.secondary' }}>{p.note}</Typography>}
-    </Box>
-  )
-}
 
 export default function App() {
   const [settings, updateSettings] = useSettings()
@@ -85,7 +73,15 @@ export default function App() {
   const [aboutOpen, setAboutOpen] = useState(false)
   const [licensesOpen, setLicensesOpen] = useState(false)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
-  const q = useQueue(settings)
+  const bg = useBackgroundImage()
+  const q = useQueue(settings, bg.image?.bitmap ?? null)
+  // 動画は、このブラウザで作れる入れ物だけを選択肢に表示する（調べ終わるまでは選んでいるものも残す）
+  const videoSupport = useVideoSupport()
+  const formatOptions = FORMAT_OPTIONS.filter(([f]) => !isVideo(f) || videoSupport?.[f] || (!videoSupport && f === settings.format))
+  const video = isVideo(settings.format)
+  useEffect(() => {
+    if (videoSupport && isVideo(settings.format) && !videoSupport[settings.format]) updateSettings({ format: 'mp3' })
+  }, [videoSupport, settings.format])
   // 開く画面はフォルダを覚える。最近使用したファイルの一覧はないので記録しない
   configureFileAccess({ rememberFolder: true, startFolder: 'music', recentFiles: false, pickerMode: 'auto' })
   const picker = useFilesPicker(AUDIO_ACCEPT, q.add, t('file.audioType'))
@@ -193,16 +189,22 @@ export default function App() {
 
           {/* 操作の帯: 出力の形式、サンプルレート、チャンネルと、一覧への操作 */}
           <Paper square elevation={0} sx={{ px: 2, py: 1, display: 'flex', alignItems: 'center', columnGap: 2, rowGap: 1, flexWrap: 'wrap', borderBottom: 1, borderColor: 'divider' }}>
-            <OptionSelect label={t('opt.format')} value={settings.format} disabled={q.running} options={FORMAT_OPTIONS} onChange={(format) => updateSettings({ format })} />
-            <OptionSelect
-              label={t('opt.rate')}
-              value={String(settings.sampleRate) as (typeof RATE_OPTIONS)[number][0]}
-              disabled={q.running || settings.format === 'opus'}
-              options={RATE_OPTIONS}
-              onChange={(v) => updateSettings({ sampleRate: Number(v) })}
-              note={rateNote}
-            />
-            <OptionSelect label={t('opt.channels')} value={settings.mono ? 'mono' : 'original'} disabled={q.running} options={CHANNEL_OPTIONS} onChange={(v) => updateSettings({ mono: v === 'mono' })} />
+            <OptionSelect label={t('opt.format')} value={settings.format} disabled={q.running} options={formatOptions} onChange={(format) => updateSettings({ format })} />
+            {video ? (
+              <VideoOptionsBar settings={settings} update={updateSettings} disabled={q.running} bg={bg} />
+            ) : (
+              <>
+                <OptionSelect
+                  label={t('opt.rate')}
+                  value={String(settings.sampleRate) as (typeof RATE_OPTIONS)[number][0]}
+                  disabled={q.running || settings.format === 'opus'}
+                  options={RATE_OPTIONS}
+                  onChange={(v) => updateSettings({ sampleRate: Number(v) })}
+                  note={rateNote}
+                />
+                <OptionSelect label={t('opt.channels')} value={settings.mono ? 'mono' : 'original'} disabled={q.running} options={CHANNEL_OPTIONS} onChange={(v) => updateSettings({ mono: v === 'mono' })} />
+              </>
+            )}
             <Box sx={{ display: 'flex', gap: 1, ml: mobile ? 0 : 'auto' }}>
               <Button size="small" startIcon={<FontAwesomeIcon icon={faPlus} />} onClick={openFiles}>
                 {t('queue.add')}
