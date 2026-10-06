@@ -123,6 +123,6 @@
   "video.style": "波形",
   "video.styleOverview": "全体と再生位置",
   "video.styleScroll": "流れる波形",
-  "video.styleBars": "音量の棒",
+  "video.styleBars": "音量波形",
   "video.styleScope": "その瞬間の波形"
 }
