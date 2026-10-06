@@ -1,11 +1,11 @@
-import { execSync } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
 import pkg from './package.json' with { type: 'json' }
+import { APP_INFO } from './app/appInfo.ts'
 
 // 単体のサイト（app/）のビルド設定。ライブラリ（src/）は React に依存しないまま、app/ から使う
 const root = dirname(fileURLToPath(import.meta.url))
@@ -20,34 +20,18 @@ function submodule(name: string, entry: string, env: string | undefined) {
 }
 // PevenMUI（UI 部品）と wevocal-lib（音声ファイルの読み込み・書き出し。TypeScript 側は web/）
 const pevenmui = submodule('pevenmui', 'src/index.ts', process.env.PEVENMUI_PATH)
+// アプリの定義をビルドに渡すプラグイン（場所が決まるのは実行時なので、動的に読み込む。Node が .ts の型を取り除いて読む）
+const { pevenApp, pevenManifest }: typeof import('../pevenmui/src/vite.ts') = await import(pathToFileURL(resolve(pevenmui, 'src/vite.ts')).href)
 const wevocalLib = submodule('wevocal-lib', 'web/src/index.ts', process.env.WEVOCAL_LIB_PATH)
 
 // 開発サーバーで、依存パッケージのファイル（フォントなど）を配れるようにする。WeVocalSynth の submodule として開発するときは親の node_modules も許可する
 const nodeModules = [resolve(root, 'node_modules'), resolve(root, '../node_modules')].filter((p) => existsSync(p))
-
-/**
- * ビルドしたコミットの短いハッシュ。バージョン番号を上げずにデプロイしても、どの版か分かるようにする
- * （CI では GITHUB_SHA、手元では git から。取れなければ dev）
- */
-function commitHash(): string {
-  if (process.env.GITHUB_SHA) return process.env.GITHUB_SHA.slice(0, 7)
-  try {
-    return execSync('git rev-parse --short=7 HEAD', { cwd: root, stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim()
-  } catch {
-    return 'dev'
-  }
-}
-const commit = commitHash()
-
-/** OGP に使う配信先の絶対 URL（末尾 /）。CI から SITE_URL で指定する。無ければ公開中の URL */
-const siteUrl = (process.env.SITE_URL ?? 'https://wevocalconverter.pitan76.net/').replace(/\/?$/, '/')
 
 export default defineConfig({
   root: resolve(root, 'app'),
   // 配信先のサブパス（GitHub Pages など）は BASE_PATH で指定する
   base: process.env.BASE_PATH ?? '/',
   // 「このアプリについて」と設定に出すバージョン（package.json の version）とコミット
-  define: { __APP_VERSION__: JSON.stringify(pkg.version), __APP_COMMIT__: JSON.stringify(commit) },
   publicDir: resolve(root, 'public'),
   resolve: {
     alias: [
@@ -62,27 +46,14 @@ export default defineConfig({
   server: { fs: { allow: [root, pevenmui, wevocalLib, ...nodeModules] } },
   plugins: [
     react(),
-    // OGP のメタタグは絶対 URL が要るので、index.html の %SITE_URL% を置き換える
-    {
-      name: 'site-url',
-      transformIndexHtml: (html) => html.replaceAll('%SITE_URL%', siteUrl),
-    },
-    // 更新の通知で「どの版が来たか」を出すため、配信中の版を version.json に書く（オフライン用のキャッシュには入れない）
-    {
-      name: 'version-json',
-      generateBundle() {
-        this.emitFile({ type: 'asset', fileName: 'version.json', source: JSON.stringify({ version: pkg.version, commit }) })
-      },
-    },
+    // 版（__APP_VERSION__、__APP_COMMIT__、version.json）と、index.html の名前、言語、配信先の URL（SITE_URL で指定）。WeVocalSynth と同じ
+    pevenApp(APP_INFO, { version: pkg.version, root }),
     VitePWA({
       // 新しい版は利用者が「更新」を押したときに切り替える（抽出中に勝手に再読み込みしない。UpdatePrompt 参照）
       registerType: 'prompt',
       includeAssets: ['favicon.ico', 'icon.svg', 'apple-touch-icon.png'],
       manifest: {
-        name: 'WeVocalConverter',
-        short_name: 'WeVocalConverter',
-        description: '音声ファイルの形式を変換する Web ツール',
-        lang: 'ja',
+        ...pevenManifest(APP_INFO),
         display: 'standalone',
         background_color: '#ffffff',
         theme_color: '#ffffff',

@@ -1,11 +1,12 @@
 import type { QueueItem } from './useQueue'
+import { app } from './appConfig'
 
 // 一覧を IndexedDB に残し、ページを閉じても次に開いたときに戻す。
 // - 待機中・失敗した曲は、元のファイルごと残す（開き直したら続きから変換できる）。変換中の曲は待機中として残す
 // - 変換した結果は、まだダウンロードしていないものだけ残す。ダウンロードしても画面の一覧からは消さない（次に開いたときに出ないだけ）
 // どこまで残すかは設定で変えられる（`KeepMode`。残さない・ダウンロードした結果も残す）
 
-const DB = 'wevocalconverter'
+const DB = app.id
 const STORE = 'queue'
 
 /** IndexedDB に入れる1曲 */

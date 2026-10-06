@@ -3,6 +3,7 @@ import type { ExportFormat, WavFormat } from 'wevocal-lib'
 import type { WindowMode } from 'pevenmui'
 import type { LangSetting } from './i18n'
 import type { KeepMode } from './persist'
+import { app } from './appConfig'
 
 export type ThemeSetting = 'system' | 'light' | 'dark'
 
@@ -30,7 +31,7 @@ export interface Settings {
 
 export const DEFAULT_SETTINGS: Settings = { theme: 'system', language: 'auto', uiScale: 1, format: 'mp3', wavFormat: 'pcm16', kbps: 192, sampleRate: 0, mono: false, dialogWindow: 'auto', keepQueue: 'undownloaded', devUpdates: false }
 
-const KEY = 'wevocalconverter.settings'
+const KEY = app.key('settings')
 
 function load(): Settings {
   try {

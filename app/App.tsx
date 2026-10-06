@@ -14,9 +14,8 @@ import SettingsDialog from './SettingsDialog'
 import { useSettings } from './settings'
 import { useQueue, type QueueItem } from './useQueue'
 import { makeZip } from './zip'
+import { app } from './appConfig'
 
-const REPOSITORY_URL = 'https://github.com/PTOM76/wevocalconverter'
-const AUTHOR = 'PitaQ'
 /** 今動いている版（バージョンとコミット） */
 const APP_BUILD = formatBuild(__APP_VERSION__, __APP_COMMIT__)
 
@@ -106,7 +105,7 @@ export default function App() {
   const saveAll = async () => {
     const files = done.flatMap((it) => (it.result ? [{ name: outName(it), blob: it.result }] : []))
     if (!files.length) return
-    downloadBlob(await makeZip(files), 'wevocalconverter.zip')
+    downloadBlob(await makeZip(files), `${app.id}.zip`)
     for (const it of done) q.markSaved(it.id)
   }
 
@@ -189,7 +188,7 @@ export default function App() {
       <PevenLabels.Provider value={i18n.labels(lang)}>
       <WindowModeContext.Provider value={settings.dialogWindow === 'auto' ? autoWindowMode() : settings.dialogWindow}>
         <Box sx={{ height: FULL_HEIGHT, display: 'flex', flexDirection: 'column', overflow: 'hidden', bgcolor: 'background.default' }}>
-          <AppHeader title="WeVocalConverter" icon={<AppIcon size={16} />} menus={mobile ? mobileMenus : menus} />
+          <AppHeader icon={<AppIcon size={16} />} menus={mobile ? mobileMenus : menus} />
           {picker.input}
 
           {/* 操作の帯: 出力の形式、サンプルレート、チャンネルと、一覧への操作 */}
@@ -244,19 +243,18 @@ export default function App() {
         </Box>
 
         <SettingsDialog open={settingsOpen} focusSignal={settingsFocus} onClose={() => setSettingsOpen(false)} settings={settings} onChange={updateSettings} notify={setToast} />
-        <LicensesDialog open={licensesOpen} onClose={() => setLicensesOpen(false)} title={t('menu.licenses')} intro={t('licenses.intro')} entries={licenseEntries(REPOSITORY_URL)} />
+        <LicensesDialog open={licensesOpen} onClose={() => setLicensesOpen(false)} title={t('menu.licenses')} intro={t('licenses.intro')} entries={licenseEntries(app.repository)} />
         <AboutDialog
           open={aboutOpen}
           onClose={() => setAboutOpen(false)}
           icon={<AppIcon size={56} />}
-          name="WeVocalConverter"
           rows={[
             [t('about.version'), <span className="selectable">{APP_BUILD}</span>],
-            [t('about.author'), AUTHOR],
+            [t('about.author'), app.author],
             [
               'GitHub',
-              <Link className="selectable" href={REPOSITORY_URL} target="_blank" rel="noopener noreferrer">
-                {REPOSITORY_URL.replace('https://', '')}
+              <Link className="selectable" href={app.repository} target="_blank" rel="noopener noreferrer">
+                {app.repository.replace('https://', '')}
               </Link>,
             ],
             [t('about.license'), t('about.licenseText')],
