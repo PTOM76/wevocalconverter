@@ -167,7 +167,7 @@ function bars(clip: Clip, wave: VideoWave, box: WaveBox, fps: number): Painter {
   const len = clip.channels[0].length
   const BARS = wave.bars ?? DEFAULT_BARS
   // 棒が多いときは低い音の棒が細かくなるので、FFT を長くして周波数の分解能を上げる
-  const FFT_SIZE = BARS > 64 ? 4096 : 2048
+  const FFT_SIZE = BARS > 256 ? 8192 : BARS > 64 ? 4096 : 2048
   const hann = Float32Array.from({ length: FFT_SIZE }, (_, i) => 0.5 - 0.5 * Math.cos((2 * Math.PI * i) / (FFT_SIZE - 1)))
   const re = new Float32Array(FFT_SIZE)
   const im = new Float32Array(FFT_SIZE)
@@ -221,6 +221,7 @@ function bars(clip: Clip, wave: VideoWave, box: WaveBox, fps: number): Painter {
 
 /** 波形の種類ごとの描き方 */
 export function createWavePainter(clip: Clip, wave: VideoWave, box: WaveBox, fps: number): Painter {
+  if (wave.style === 'none') return () => {}
   if (wave.style === 'scope') return scope(clip, wave, box)
   if (wave.style === 'scroll') return scroll(clip, wave, box)
   if (wave.style === 'bars') return bars(clip, wave, box, fps)

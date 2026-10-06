@@ -16,7 +16,7 @@ import { useSettings } from './settings'
 import { useQueue, type QueueItem } from './useQueue'
 import { makeZip } from './zip'
 import { OptionSelect } from './OptionSelect'
-import { VideoOptionsBar, isVideo, useBackgroundImage, useVideoSupport } from './video'
+import { VideoOptionsBar, VideoPreview, isVideo, useBackgroundImage, useVideoSupport } from './video'
 import { app } from './appConfig'
 
 /** 今動いている版（バージョンとコミット） */
@@ -225,6 +225,7 @@ export default function App() {
           </Paper>
 
           <Box component="main" sx={{ flex: 1, minHeight: 0, overflowY: 'auto', p: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {video && <VideoPreview settings={settings} image={bg.image?.bitmap ?? null} file={q.items[0]?.file} />}
             {q.items.length ? (
               <QueueList items={q.items} busy={q.running} onSave={save} onConvert={(id) => void q.run(id)} onRemove={q.remove} onCancel={q.cancelItem} />
             ) : (

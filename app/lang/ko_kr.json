@@ -129,5 +129,9 @@
   "video.bars": "세밀함",
   "video.bars32": "거칠게(32)",
   "video.bars64": "표준(64)",
-  "video.bars128": "세밀하게(128)"
+  "video.bars128": "세밀하게(128)",
+  "video.styleNone": "파형 없음",
+  "video.preview": "미리보기",
+  "video.bars256": "매우 세밀하게(256)",
+  "video.bars512": "가장 세밀하게(512)"
 }

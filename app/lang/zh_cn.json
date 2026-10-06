@@ -129,5 +129,9 @@
   "video.bars": "细致度",
   "video.bars32": "粗（32）",
   "video.bars64": "标准（64）",
-  "video.bars128": "细（128）"
+  "video.bars128": "细（128）",
+  "video.styleNone": "无波形",
+  "video.preview": "预览",
+  "video.bars256": "很细（256）",
+  "video.bars512": "最细（512）"
 }

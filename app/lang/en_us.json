@@ -129,5 +129,9 @@
   "video.bars": "Detail",
   "video.bars32": "Coarse (32)",
   "video.bars64": "Normal (64)",
-  "video.bars128": "Fine (128)"
+  "video.bars128": "Fine (128)",
+  "video.styleNone": "No waveform",
+  "video.preview": "Preview",
+  "video.bars256": "Very fine (256)",
+  "video.bars512": "Finest (512)"
 }

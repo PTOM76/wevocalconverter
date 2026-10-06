@@ -50,6 +50,13 @@ export async function canEncodeVideo(container: VideoContainer, width = 1280, he
   return (await pickCodecs(container, width, height, 2)) !== null
 }
 
+/** 動画の 1 フレームを画像にする（書き出す前のプレビュー）。`time` は秒 */
+export async function renderFrame(clip: Clip, look: VideoLook, time: number, fps = 30): Promise<Blob> {
+  const renderer = new FrameRenderer(clip, look, fps)
+  renderer.draw(time)
+  return renderer.canvas.convertToBlob({ type: 'image/jpeg', quality: 0.85 })
+}
+
 /** `clip` に簡易な波形を付けて動画にする */
 export async function renderVideo(source: Clip, o: VideoOptions): Promise<Blob> {
   const clip = await prepareClip(source, { range: null, sampleRate: AUDIO_RATE, mono: source.channels.length === 1 })

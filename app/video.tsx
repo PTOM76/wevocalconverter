@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { Box, Button, Checkbox, FormControlLabel, Typography } from '@mui/material'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faImage, faXmark } from '@fortawesome/free-solid-svg-icons'
-import { canEncodeVideo, type VideoContainer, type VideoLook } from '../src/index'
+import { decodeFile, type Clip } from 'wevocal-lib'
+import { canEncodeVideo, renderFrame, type VideoContainer, type VideoLook } from '../src/index'
 import { t, type MessageKey } from './i18n'
 import type { Settings, VideoSize } from './settings'
 import { OptionSelect } from './OptionSelect'
@@ -31,6 +32,42 @@ export function useVideoSupport(): Record<VideoContainer, boolean> | null {
   return support
 }
 
+/** 一覧の先頭のファイルで、曲の真ん中のフレームを描いたプレビュー。読み込んだ音声はファイルごとに覚えておく */
+const decoded = new WeakMap<File, Promise<Clip>>()
+export function VideoPreview(p: { settings: Settings; image: ImageBitmap | null; file: File | undefined }) {
+  const [url, setUrl] = useState<string | null>(null)
+  useEffect(() => {
+    const file = p.file
+    if (!file) return setUrl(null)
+    let made: string | null = null
+    let cancelled = false
+    // 続けて設定を変えたときは、最後の 1 回だけ描く
+    const timer = setTimeout(() => {
+      if (!decoded.has(file)) decoded.set(file, decodeFile(file))
+      void decoded
+        .get(file)!
+        .then((clip) => renderFrame(clip, videoLook(p.settings, p.image, file.name), clip.channels[0].length / clip.sampleRate / 2))
+        .then((blob) => {
+          if (cancelled) return
+          made = URL.createObjectURL(blob)
+          setUrl(made)
+        })
+        .catch(() => setUrl(null))
+    }, 150)
+    return () => {
+      cancelled = true
+      clearTimeout(timer)
+      if (made) URL.revokeObjectURL(made)
+    }
+  }, [p.settings, p.image, p.file])
+  if (!url) return null
+  return (
+    <Box sx={{ display: 'flex', justifyContent: 'center', flexShrink: 0 }}>
+      <Box component="img" src={url} alt={t('video.preview')} sx={{ maxWidth: '100%', maxHeight: 240, borderRadius: 1, border: 1, borderColor: 'divider' }} />
+    </Box>
+  )
+}
+
 /** 背景の画像。ページを閉じると消える（設定には残さない） */
 export function useBackgroundImage() {
   const [image, setImage] = useState<{ bitmap: ImageBitmap; name: string } | null>(null)
@@ -56,16 +93,19 @@ const SIZE_OPTIONS: [VideoSize, MessageKey][] = [
   ['1080x1080', 'video.sizeSquare'],
 ]
 const STYLE_OPTIONS: [Settings['videoWaveStyle'], MessageKey][] = [
+  ['none', 'video.styleNone'],
   ['scope', 'video.styleScope'],
   ['overview', 'video.styleOverview'],
   ['scroll', 'video.styleScroll'],
   ['bars', 'video.styleBars'],
 ]
-type BarsOption = '32' | '64' | '128'
+type BarsOption = '32' | '64' | '128' | '256' | '512'
 const BARS_OPTIONS: [BarsOption, MessageKey][] = [
   ['32', 'video.bars32'],
   ['64', 'video.bars64'],
   ['128', 'video.bars128'],
+  ['256', 'video.bars256'],
+  ['512', 'video.bars512'],
 ]
 const POSITION_OPTIONS: [Settings['videoWavePosition'], MessageKey][] = [
   ['bottom', 'video.posBottom'],

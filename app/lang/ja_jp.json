@@ -129,5 +129,9 @@
   "video.bars": "細かさ",
   "video.bars32": "粗い（32）",
   "video.bars64": "標準（64）",
-  "video.bars128": "細かい（128）"
+  "video.bars128": "細かい（128）",
+  "video.styleNone": "波形なし",
+  "video.preview": "プレビュー",
+  "video.bars256": "とても細かい（256）",
+  "video.bars512": "最も細かい（512）"
 }

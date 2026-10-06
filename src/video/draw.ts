@@ -10,8 +10,8 @@ export interface VideoBackground {
   fit: 'cover' | 'contain'
 }
 
-/** 波形の種類。scope: その瞬間の波形（オシロスコープ）、overview: 全体の波形と再生位置の線、scroll: 再生位置の周りの波形が流れる、bars: 音量の棒（周波数ごと） */
-export type WaveStyle = 'scope' | 'overview' | 'scroll' | 'bars'
+/** 波形の種類。none: 波形なし（背景と曲名だけ）、scope: その瞬間の波形（オシロスコープ）、overview: 全体の波形と再生位置の線、scroll: 再生位置の周りの波形が流れる、bars: 音量の棒（周波数ごと） */
+export type WaveStyle = 'none' | 'scope' | 'overview' | 'scroll' | 'bars'
 
 /** 波形の見た目 */
 export interface VideoWave {
@@ -75,8 +75,8 @@ function drawTitle(ctx: OffscreenCanvasRenderingContext2D, look: VideoLook) {
   ctx.fillStyle = look.titleColor
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
-  // 波形が下にあるときは中央、中央にあるときは上に置く
-  const y = look.wave.position === 'bottom' ? look.height * 0.4 : look.height * 0.15
+  // 波形が下にあるとき、波形がないときは中央、波形が中央にあるときは上に置く
+  const y = look.wave.style === 'none' ? look.height / 2 : look.wave.position === 'bottom' ? look.height * 0.4 : look.height * 0.15
   ctx.fillText(look.title, look.width / 2, y, look.width * 0.9)
 }
 
