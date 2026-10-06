@@ -124,5 +124,6 @@
   "video.styleOverview": "全局与播放位置",
   "video.styleScroll": "滚动波形",
   "video.styleBars": "音量波形",
-  "video.styleScope": "瞬时波形"
+  "video.styleScope": "瞬时波形",
+  "video.gradient": "渐变（从波形颜色到已播放颜色）"
 }

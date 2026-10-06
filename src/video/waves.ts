@@ -199,7 +199,7 @@ function bars(clip: Clip, wave: VideoWave, box: WaveBox, fps: number): Painter {
       re[i] = (v / clip.channels.length) * hann[i]
     }
     fft(re, im)
-    ctx.fillStyle = grad(ctx)
+    ctx.fillStyle = wave.gradient ? grad(ctx) : wave.playedColor
     for (let b = 0; b < BARS; b++) {
       const [a, e] = ranges[b]
       let sum = 0

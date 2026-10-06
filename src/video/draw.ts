@@ -16,13 +16,15 @@ export type WaveStyle = 'scope' | 'overview' | 'scroll' | 'bars'
 /** 波形の見た目 */
 export interface VideoWave {
   style: WaveStyle
-  /** まだ再生していないところの色（音量の棒では棒の色） */
+  /** まだ再生していないところの色（音量の棒のグラデーションでは下の端の色） */
   color: string
-  /** 再生したところと再生位置の線の色（音量の棒では上の端の色） */
+  /** 再生したところと再生位置の線の色（音量の棒では棒の色、グラデーションなら上の端の色） */
   playedColor: string
   position: 'bottom' | 'center'
   /** 画面の高さに対する割合（0〜1） */
   height: number
+  /** 音量の棒を、下の端の `color` から上の端の `playedColor` へのグラデーションにする（偽なら `playedColor` の単色） */
+  gradient?: boolean
 }
 
 /** 描画の設定 */

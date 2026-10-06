@@ -16,7 +16,7 @@ export function videoLook(s: Settings, image: ImageBitmap | null, fileName: stri
     width,
     height,
     background: { color: s.videoBg, image, fit: s.videoFit },
-    wave: { style: s.videoWaveStyle, color: s.videoWave, playedColor: s.videoPlayed, position: s.videoWavePosition, height: 0.25 },
+    wave: { style: s.videoWaveStyle, color: s.videoWave, playedColor: s.videoPlayed, position: s.videoWavePosition, height: 0.25, gradient: s.videoGradient },
     title: s.videoTitle ? fileName.replace(/\.[^.]+$/, '') : '',
     titleColor: '#ffffff',
   }
@@ -123,6 +123,14 @@ export function VideoOptionsBar(p: {
           </>
         )}
       </Box>
+      {s.videoWaveStyle === 'bars' && (
+        <FormControlLabel
+          control={<Checkbox size="small" checked={s.videoGradient} disabled={disabled} onChange={(e) => update({ videoGradient: e.target.checked })} />}
+          label={t('video.gradient')}
+          slotProps={{ typography: { sx: { fontSize: 13 } } }}
+          sx={{ mr: 0 }}
+        />
+      )}
       <FormControlLabel
         control={<Checkbox size="small" checked={s.videoTitle} disabled={disabled} onChange={(e) => update({ videoTitle: e.target.checked })} />}
         label={t('video.title')}

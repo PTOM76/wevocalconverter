@@ -124,5 +124,6 @@
   "video.styleOverview": "全體與播放位置",
   "video.styleScroll": "捲動波形",
   "video.styleBars": "音量波形",
-  "video.styleScope": "瞬時波形"
+  "video.styleScope": "瞬時波形",
+  "video.gradient": "漸層（從波形顏色到已播放顏色）"
 }

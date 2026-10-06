@@ -124,5 +124,6 @@
   "video.styleOverview": "Overview",
   "video.styleScroll": "Scrolling",
   "video.styleBars": "Level bars",
-  "video.styleScope": "Oscilloscope"
+  "video.styleScope": "Oscilloscope",
+  "video.gradient": "Gradient (wave color to played color)"
 }
