@@ -37,6 +37,8 @@ export interface Settings {
   videoTitle: boolean
   /** 音量波形をグラデーションにする */
   videoGradient: boolean
+  /** 音量波形の棒の数 */
+  videoBars: number
   /** 閉じたあとも一覧を残すか（none: 残さない、undownloaded: ダウンロードしていない結果だけ、all: ダウンロードした結果も） */
   keepQueue: KeepMode
   /** ダイアログの出し方。auto は PWA かつ Chromium 系ならポップアップ、ほかはダイアログ。別窓を開けなければダイアログ */
@@ -47,7 +49,7 @@ export interface Settings {
 
 export type VideoSize = '1280x720' | '1920x1080' | '1080x1920' | '1080x1080'
 
-export const DEFAULT_SETTINGS: Settings = { theme: 'system', language: 'auto', uiScale: 1, format: 'mp3', wavFormat: 'pcm16', kbps: 192, sampleRate: 0, mono: false, videoSize: '1280x720', videoBg: '#101418', videoWave: '#5c6b7a', videoPlayed: '#4fc3f7', videoWaveStyle: 'bars', videoWavePosition: 'center', videoFit: 'cover', videoTitle: false, videoGradient: false, dialogWindow: 'auto', keepQueue: 'undownloaded', devUpdates: false }
+export const DEFAULT_SETTINGS: Settings = { theme: 'system', language: 'auto', uiScale: 1, format: 'mp3', wavFormat: 'pcm16', kbps: 192, sampleRate: 0, mono: false, videoSize: '1280x720', videoBg: '#101418', videoWave: '#5c6b7a', videoPlayed: '#4fc3f7', videoWaveStyle: 'bars', videoWavePosition: 'center', videoFit: 'cover', videoTitle: false, videoGradient: false, videoBars: 64, dialogWindow: 'auto', keepQueue: 'undownloaded', devUpdates: false }
 
 const KEY = app.key('settings')
 

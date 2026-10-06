@@ -25,6 +25,8 @@ export interface VideoWave {
   height: number
   /** 音量の棒を、下の端の `color` から上の端の `playedColor` へのグラデーションにする（偽なら `playedColor` の単色） */
   gradient?: boolean
+  /** 音量の棒の数（細かさ。既定は 64） */
+  bars?: number
 }
 
 /** 描画の設定 */

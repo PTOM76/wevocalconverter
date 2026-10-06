@@ -125,5 +125,9 @@
   "video.styleScroll": "流れる波形",
   "video.styleBars": "音量波形",
   "video.styleScope": "その瞬間の波形",
-  "video.gradient": "グラデーションにする（波形の色から再生済みの色へ）"
+  "video.gradient": "グラデーションにする（波形の色から再生済みの色へ）",
+  "video.bars": "細かさ",
+  "video.bars32": "粗い（32）",
+  "video.bars64": "標準（64）",
+  "video.bars128": "細かい（128）"
 }

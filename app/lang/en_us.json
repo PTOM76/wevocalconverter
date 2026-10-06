@@ -125,5 +125,9 @@
   "video.styleScroll": "Scrolling",
   "video.styleBars": "Level bars",
   "video.styleScope": "Oscilloscope",
-  "video.gradient": "Gradient (wave color to played color)"
+  "video.gradient": "Gradient (wave color to played color)",
+  "video.bars": "Detail",
+  "video.bars32": "Coarse (32)",
+  "video.bars64": "Normal (64)",
+  "video.bars128": "Fine (128)"
 }

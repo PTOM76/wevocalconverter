@@ -7,9 +7,8 @@ type Painter = (ctx: OffscreenCanvasRenderingContext2D, time: number) => void
 const SCOPE_SECONDS = 0.04
 /** 流れる波形で、画面の幅に入れる長さ（秒） */
 const SCROLL_SECONDS = 6
-/** 音量の棒の数と、FFT の大きさ */
-const BARS = 64
-const FFT_SIZE = 2048
+/** 音量の棒の数の既定（`VideoWave.bars`） */
+const DEFAULT_BARS = 64
 /** 音量の棒の下限と上限の周波数（Hz）と、表示する音量の幅（dB） */
 const BAR_MIN_HZ = 40
 const BAR_MAX_HZ = 16000
@@ -166,6 +165,9 @@ function fft(re: Float32Array, im: Float32Array) {
 /** 音量の棒。再生位置の周りの FFT を、低い音から高い音へ対数の間隔でまとめる。下がるときはゆっくり下げる */
 function bars(clip: Clip, wave: VideoWave, box: WaveBox, fps: number): Painter {
   const len = clip.channels[0].length
+  const BARS = wave.bars ?? DEFAULT_BARS
+  // 棒が多いときは低い音の棒が細かくなるので、FFT を長くして周波数の分解能を上げる
+  const FFT_SIZE = BARS > 64 ? 4096 : 2048
   const hann = Float32Array.from({ length: FFT_SIZE }, (_, i) => 0.5 - 0.5 * Math.cos((2 * Math.PI * i) / (FFT_SIZE - 1)))
   const re = new Float32Array(FFT_SIZE)
   const im = new Float32Array(FFT_SIZE)

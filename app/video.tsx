@@ -16,7 +16,7 @@ export function videoLook(s: Settings, image: ImageBitmap | null, fileName: stri
     width,
     height,
     background: { color: s.videoBg, image, fit: s.videoFit },
-    wave: { style: s.videoWaveStyle, color: s.videoWave, playedColor: s.videoPlayed, position: s.videoWavePosition, height: 0.25, gradient: s.videoGradient },
+    wave: { style: s.videoWaveStyle, color: s.videoWave, playedColor: s.videoPlayed, position: s.videoWavePosition, height: 0.25, gradient: s.videoGradient, bars: s.videoBars },
     title: s.videoTitle ? fileName.replace(/\.[^.]+$/, '') : '',
     titleColor: '#ffffff',
   }
@@ -60,6 +60,12 @@ const STYLE_OPTIONS: [Settings['videoWaveStyle'], MessageKey][] = [
   ['overview', 'video.styleOverview'],
   ['scroll', 'video.styleScroll'],
   ['bars', 'video.styleBars'],
+]
+type BarsOption = '32' | '64' | '128'
+const BARS_OPTIONS: [BarsOption, MessageKey][] = [
+  ['32', 'video.bars32'],
+  ['64', 'video.bars64'],
+  ['128', 'video.bars128'],
 ]
 const POSITION_OPTIONS: [Settings['videoWavePosition'], MessageKey][] = [
   ['bottom', 'video.posBottom'],
@@ -123,6 +129,9 @@ export function VideoOptionsBar(p: {
           </>
         )}
       </Box>
+      {s.videoWaveStyle === 'bars' && (
+        <OptionSelect label={t('video.bars')} value={String(s.videoBars) as BarsOption} disabled={disabled} options={BARS_OPTIONS} onChange={(v) => update({ videoBars: Number(v) })} />
+      )}
       {s.videoWaveStyle === 'bars' && (
         <FormControlLabel
           control={<Checkbox size="small" checked={s.videoGradient} disabled={disabled} onChange={(e) => update({ videoGradient: e.target.checked })} />}

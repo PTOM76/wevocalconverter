@@ -125,5 +125,9 @@
   "video.styleScroll": "捲動波形",
   "video.styleBars": "音量波形",
   "video.styleScope": "瞬時波形",
-  "video.gradient": "漸層（從波形顏色到已播放顏色）"
+  "video.gradient": "漸層（從波形顏色到已播放顏色）",
+  "video.bars": "細緻度",
+  "video.bars32": "粗（32）",
+  "video.bars64": "標準（64）",
+  "video.bars128": "細（128）"
 }

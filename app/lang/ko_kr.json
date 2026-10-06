@@ -125,5 +125,9 @@
   "video.styleScroll": "흐르는 파형",
   "video.styleBars": "음량 파형",
   "video.styleScope": "순간 파형",
-  "video.gradient": "그라데이션(파형 색에서 재생한 부분 색으로)"
+  "video.gradient": "그라데이션(파형 색에서 재생한 부분 색으로)",
+  "video.bars": "세밀함",
+  "video.bars32": "거칠게(32)",
+  "video.bars64": "표준(64)",
+  "video.bars128": "세밀하게(128)"
 }
