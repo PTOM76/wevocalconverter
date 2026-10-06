@@ -108,7 +108,7 @@
   "video.size1080": "1920×1080",
   "video.sizePortrait": "Portrait (1080×1920)",
   "video.sizeSquare": "Square (1080×1080)",
-  "video.position": "Waveform",
+  "video.position": "Position",
   "video.posBottom": "Bottom",
   "video.posCenter": "Center",
   "video.bg": "Background",
@@ -119,5 +119,9 @@
   "video.fitCover": "Fill",
   "video.fitContain": "Fit",
   "video.title": "Show file name",
-  "licenses.video": "Video export (used unmodified)"
+  "licenses.video": "Video export (used unmodified)",
+  "video.style": "Waveform",
+  "video.styleOverview": "Overview",
+  "video.styleScroll": "Scrolling",
+  "video.styleBars": "Bars"
 }

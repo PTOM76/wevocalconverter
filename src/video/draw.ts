@@ -1,4 +1,5 @@
 import type { Clip } from 'wevocal-lib'
+import { createWavePainter } from './waves'
 
 /** 背景（単色、または静止画） */
 export interface VideoBackground {
@@ -9,11 +10,15 @@ export interface VideoBackground {
   fit: 'cover' | 'contain'
 }
 
-/** 波形の見た目（今は「全体の波形と再生位置の線」だけ） */
+/** 波形の種類。overview: 全体の波形と再生位置の線、scroll: 再生位置の周りの波形が流れる、bars: 音量の棒（周波数ごと） */
+export type WaveStyle = 'overview' | 'scroll' | 'bars'
+
+/** 波形の見た目 */
 export interface VideoWave {
-  /** まだ再生していないところの色 */
+  style: WaveStyle
+  /** まだ再生していないところの色（音量の棒では棒の色） */
   color: string
-  /** 再生したところと再生位置の線の色 */
+  /** 再生したところと再生位置の線の色（音量の棒では上の端の色） */
   playedColor: string
   position: 'bottom' | 'center'
   /** 画面の高さに対する割合（0〜1） */
@@ -31,30 +36,19 @@ export interface VideoLook {
   titleColor: string
 }
 
-/** 波形の左右の余白（画面の幅に対する割合） */
-const MARGIN = 0.05
+/** 波形の帯の位置（左右の余白は画面の幅の 5%） */
+export interface WaveBox {
+  left: number
+  top: number
+  width: number
+  height: number
+}
 
-/** 列ごとの最小値と最大値（全チャンネルを通す） */
-function columnPeaks(clip: Clip, columns: number): { min: Float32Array; max: Float32Array } {
-  const len = clip.channels[0].length
-  const min = new Float32Array(columns)
-  const max = new Float32Array(columns)
-  for (let c = 0; c < columns; c++) {
-    const s = Math.floor((c * len) / columns)
-    const e = Math.max(s + 1, Math.floor(((c + 1) * len) / columns))
-    let lo = 0
-    let hi = 0
-    for (const ch of clip.channels) {
-      for (let i = s; i < e && i < len; i++) {
-        const v = ch[i]
-        if (v < lo) lo = v
-        if (v > hi) hi = v
-      }
-    }
-    min[c] = lo
-    max[c] = hi
-  }
-  return { min, max }
+function waveBox(look: VideoLook): WaveBox {
+  const h = look.height * look.wave.height
+  const left = Math.round(look.width * 0.05)
+  const top = look.wave.position === 'bottom' ? look.height * 0.95 - h : (look.height - h) / 2
+  return { left, top, width: look.width - left * 2, height: h }
 }
 
 function drawBackground(ctx: OffscreenCanvasRenderingContext2D, look: VideoLook) {
@@ -79,60 +73,30 @@ function drawTitle(ctx: OffscreenCanvasRenderingContext2D, look: VideoLook) {
   ctx.textBaseline = 'middle'
   // 波形が下にあるときは中央、中央にあるときは上に置く
   const y = look.wave.position === 'bottom' ? look.height * 0.4 : look.height * 0.15
-  ctx.fillText(look.title, look.width / 2, y, look.width * (1 - MARGIN * 2))
+  ctx.fillText(look.title, look.width / 2, y, look.width * 0.9)
 }
 
-/** 波形の帯の上端と高さ */
-function waveBox(look: VideoLook): { top: number; h: number } {
-  const h = look.height * look.wave.height
-  const top = look.wave.position === 'bottom' ? look.height * 0.95 - h : (look.height - h) / 2
-  return { top, h }
-}
-
-function drawWave(ctx: OffscreenCanvasRenderingContext2D, look: VideoLook, peaks: { min: Float32Array; max: Float32Array }, color: string) {
-  const { top, h } = waveBox(look)
-  const left = Math.round(look.width * MARGIN)
-  const mid = top + h / 2
-  ctx.fillStyle = color
-  for (let c = 0; c < peaks.min.length; c++) {
-    const y0 = mid - peaks.max[c] * (h / 2)
-    const y1 = mid - peaks.min[c] * (h / 2)
-    ctx.fillRect(left + c, y0, 1, Math.max(1, y1 - y0))
-  }
-}
-
-/** フレームを描く。背景と波形は先に 2 枚に描いておき、フレームごとには重ねるだけにする */
+/** フレームを描く。背景と曲名は先に 1 枚に描いておき、フレームごとには重ねて波形を描くだけにする */
 export class FrameRenderer {
   readonly canvas: OffscreenCanvas
   private readonly ctx: OffscreenCanvasRenderingContext2D
   private readonly base: OffscreenCanvas
-  private readonly played: OffscreenCanvas
-  private readonly look: VideoLook
+  private readonly paint: (ctx: OffscreenCanvasRenderingContext2D, time: number) => void
 
-  constructor(clip: Clip, look: VideoLook) {
-    this.look = look
+  constructor(clip: Clip, look: VideoLook, fps: number) {
     const { width: w, height: h } = look
     this.canvas = new OffscreenCanvas(w, h)
     this.ctx = this.canvas.getContext('2d')!
-    const peaks = columnPeaks(clip, Math.round(w * (1 - MARGIN * 2)))
     this.base = new OffscreenCanvas(w, h)
     const b = this.base.getContext('2d')!
     drawBackground(b, look)
     drawTitle(b, look)
-    drawWave(b, look, peaks, look.wave.color)
-    this.played = new OffscreenCanvas(w, h)
-    drawWave(this.played.getContext('2d')!, look, peaks, look.wave.playedColor)
+    this.paint = createWavePainter(clip, look.wave, waveBox(look), fps)
   }
 
-  /** 再生位置（0〜1）のフレームを描く */
-  draw(t: number) {
-    const { ctx, look } = this
-    const left = Math.round(look.width * MARGIN)
-    const x = left + Math.round(look.width * (1 - MARGIN * 2) * t)
-    ctx.drawImage(this.base, 0, 0)
-    if (x > left) ctx.drawImage(this.played, left, 0, x - left, look.height, left, 0, x - left, look.height)
-    const { top, h } = waveBox(look)
-    ctx.fillStyle = look.wave.playedColor
-    ctx.fillRect(x - 1, top, 2, h)
+  /** 再生位置（秒）のフレームを描く */
+  draw(time: number) {
+    this.ctx.drawImage(this.base, 0, 0)
+    this.paint(this.ctx, time)
   }
 }

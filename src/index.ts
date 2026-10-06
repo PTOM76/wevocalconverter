@@ -65,4 +65,4 @@ export async function convertVideo(file: File, o: VideoOptions): Promise<Convert
   return { blob, ext: VIDEO_EXT[o.container] }
 }
 
-export { VIDEO_EXT, canEncodeVideo, renderVideo, type VideoBackground, type VideoContainer, type VideoLook, type VideoOptions, type VideoWave } from './video'
+export { VIDEO_EXT, canEncodeVideo, renderVideo, type VideoBackground, type VideoContainer, type VideoLook, type VideoOptions, type VideoWave, type WaveStyle } from './video'

@@ -108,7 +108,7 @@
   "video.size1080": "1920×1080",
   "video.sizePortrait": "縦（1080×1920）",
   "video.sizeSquare": "正方形（1080×1080）",
-  "video.position": "波形",
+  "video.position": "位置",
   "video.posBottom": "下",
   "video.posCenter": "中央",
   "video.bg": "背景",
@@ -119,5 +119,9 @@
   "video.fitCover": "画面いっぱい",
   "video.fitContain": "全体を収める",
   "video.title": "ファイル名を入れる",
-  "licenses.video": "動画の書き出し（改変せずに使用しています）"
+  "licenses.video": "動画の書き出し（改変せずに使用しています）",
+  "video.style": "波形",
+  "video.styleOverview": "全体と再生位置",
+  "video.styleScroll": "流れる波形",
+  "video.styleBars": "音量の棒"
 }

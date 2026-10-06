@@ -108,7 +108,7 @@
   "video.size1080": "1920×1080",
   "video.sizePortrait": "세로(1080×1920)",
   "video.sizeSquare": "정사각형(1080×1080)",
-  "video.position": "파형",
+  "video.position": "위치",
   "video.posBottom": "아래",
   "video.posCenter": "가운데",
   "video.bg": "배경",
@@ -119,5 +119,9 @@
   "video.fitCover": "화면 채우기",
   "video.fitContain": "전체 맞추기",
   "video.title": "파일 이름 표시",
-  "licenses.video": "동영상 내보내기(수정 없이 사용)"
+  "licenses.video": "동영상 내보내기(수정 없이 사용)",
+  "video.style": "파형",
+  "video.styleOverview": "전체와 재생 위치",
+  "video.styleScroll": "흐르는 파형",
+  "video.styleBars": "음량 막대"
 }

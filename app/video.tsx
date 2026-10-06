@@ -16,7 +16,7 @@ export function videoLook(s: Settings, image: ImageBitmap | null, fileName: stri
     width,
     height,
     background: { color: s.videoBg, image, fit: s.videoFit },
-    wave: { color: s.videoWave, playedColor: s.videoPlayed, position: s.videoWavePosition, height: 0.25 },
+    wave: { style: s.videoWaveStyle, color: s.videoWave, playedColor: s.videoPlayed, position: s.videoWavePosition, height: 0.25 },
     title: s.videoTitle ? fileName.replace(/\.[^.]+$/, '') : '',
     titleColor: '#ffffff',
   }
@@ -55,6 +55,11 @@ const SIZE_OPTIONS: [VideoSize, MessageKey][] = [
   ['1080x1920', 'video.sizePortrait'],
   ['1080x1080', 'video.sizeSquare'],
 ]
+const STYLE_OPTIONS: [Settings['videoWaveStyle'], MessageKey][] = [
+  ['overview', 'video.styleOverview'],
+  ['scroll', 'video.styleScroll'],
+  ['bars', 'video.styleBars'],
+]
 const POSITION_OPTIONS: [Settings['videoWavePosition'], MessageKey][] = [
   ['bottom', 'video.posBottom'],
   ['center', 'video.posCenter'],
@@ -86,6 +91,7 @@ export function VideoOptionsBar(p: {
   return (
     <>
       <OptionSelect label={t('video.size')} value={s.videoSize} disabled={disabled} options={SIZE_OPTIONS} onChange={(videoSize) => update({ videoSize })} />
+      <OptionSelect label={t('video.style')} value={s.videoWaveStyle} disabled={disabled} options={STYLE_OPTIONS} onChange={(videoWaveStyle) => update({ videoWaveStyle })} />
       <OptionSelect label={t('video.position')} value={s.videoWavePosition} disabled={disabled} options={POSITION_OPTIONS} onChange={(videoWavePosition) => update({ videoWavePosition })} />
       <ColorInput label={t('video.bg')} value={s.videoBg} disabled={disabled} onChange={(videoBg) => update({ videoBg })} />
       <ColorInput label={t('video.wave')} value={s.videoWave} disabled={disabled} onChange={(videoWave) => update({ videoWave })} />

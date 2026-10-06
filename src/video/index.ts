@@ -14,7 +14,7 @@ import {
 import { prepareClip, type Clip } from 'wevocal-lib'
 import { FrameRenderer, type VideoLook } from './draw'
 
-export type { VideoBackground, VideoLook, VideoWave } from './draw'
+export type { VideoBackground, VideoLook, VideoWave, WaveStyle } from './draw'
 
 /** 動画の入れ物。WebM は VP9（なければ VP8）と Opus、MP4 は H.264 と AAC */
 export type VideoContainer = 'webm' | 'mp4'
@@ -58,7 +58,7 @@ export async function renderVideo(source: Clip, o: VideoOptions): Promise<Blob> 
   if (!codecs) throw new Error(`cannot encode ${o.container}`)
   o.signal?.throwIfAborted()
 
-  const renderer = new FrameRenderer(clip, o)
+  const renderer = new FrameRenderer(clip, o, o.fps)
   const output = new Output({
     format: o.container === 'mp4' ? new Mp4OutputFormat({ fastStart: 'in-memory' }) : new WebMOutputFormat(),
     target: new BufferTarget(),
@@ -85,7 +85,7 @@ export async function renderVideo(source: Clip, o: VideoOptions): Promise<Blob> 
       sample.close()
       const until = Math.min(frames, Math.ceil(((s + n) / AUDIO_RATE) * o.fps))
       for (; frame < until; frame++) {
-        renderer.draw(frame / o.fps / duration)
+        renderer.draw(frame / o.fps)
         await video.add(frame / o.fps, 1 / o.fps)
       }
       o.onProgress?.(frame / frames)
