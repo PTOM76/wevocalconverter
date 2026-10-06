@@ -50,6 +50,21 @@ export async function canEncodeVideo(container: VideoContainer, width = 1280, he
   return (await pickCodecs(container, width, height, 2)) !== null
 }
 
+/** プレビューに使う時刻（秒）。曲の 10〜90% の中で音が最も大きいところ（真ん中が無音だと波形が映らないため） */
+export function previewTime(clip: Clip): number {
+  const len = clip.channels[0].length
+  const win = Math.min(len, 4096)
+  let best = len / 2
+  let bestPower = -1
+  for (let k = 0; k < 64; k++) {
+    const center = Math.round(len * (0.1 + (0.8 * k) / 63))
+    let p = 0
+    for (const ch of clip.channels) for (let i = Math.max(0, center - win / 2); i < Math.min(len, center + win / 2); i++) p += ch[i] * ch[i]
+    if (p > bestPower) [bestPower, best] = [p, center]
+  }
+  return best / clip.sampleRate
+}
+
 /** 動画の 1 フレームを画像にする（書き出す前のプレビュー）。`time` は秒 */
 export async function renderFrame(clip: Clip, look: VideoLook, time: number, fps = 30): Promise<Blob> {
   const renderer = new FrameRenderer(clip, look, fps)

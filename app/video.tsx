@@ -3,7 +3,7 @@ import { Box, Button, Checkbox, FormControlLabel, Typography } from '@mui/materi
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faImage, faXmark } from '@fortawesome/free-solid-svg-icons'
 import { decodeFile, type Clip } from 'wevocal-lib'
-import { canEncodeVideo, renderFrame, type VideoContainer, type VideoLook } from '../src/index'
+import { canEncodeVideo, previewTime, renderFrame, type VideoContainer, type VideoLook } from '../src/index'
 import { t, type MessageKey } from './i18n'
 import type { Settings, VideoSize } from './settings'
 import { OptionSelect } from './OptionSelect'
@@ -32,7 +32,7 @@ export function useVideoSupport(): Record<VideoContainer, boolean> | null {
   return support
 }
 
-/** 一覧の先頭のファイルで、曲の真ん中のフレームを描いたプレビュー。読み込んだ音声はファイルごとに覚えておく */
+/** 一覧の先頭のファイルで、音の大きいところのフレームを描いたプレビュー。読み込んだ音声はファイルごとに覚えておく */
 const decoded = new WeakMap<File, Promise<Clip>>()
 export function VideoPreview(p: { settings: Settings; image: ImageBitmap | null; file: File | undefined }) {
   const [url, setUrl] = useState<string | null>(null)
@@ -46,7 +46,7 @@ export function VideoPreview(p: { settings: Settings; image: ImageBitmap | null;
       if (!decoded.has(file)) decoded.set(file, decodeFile(file))
       void decoded
         .get(file)!
-        .then((clip) => renderFrame(clip, videoLook(p.settings, p.image, file.name), clip.channels[0].length / clip.sampleRate / 2))
+        .then((clip) => renderFrame(clip, videoLook(p.settings, p.image, file.name), previewTime(clip)))
         .then((blob) => {
           if (cancelled) return
           made = URL.createObjectURL(blob)
