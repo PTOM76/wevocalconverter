@@ -45,7 +45,7 @@ export interface Settings {
 
 export type VideoSize = '1280x720' | '1920x1080' | '1080x1920' | '1080x1080'
 
-export const DEFAULT_SETTINGS: Settings = { theme: 'system', language: 'auto', uiScale: 1, format: 'mp3', wavFormat: 'pcm16', kbps: 192, sampleRate: 0, mono: false, videoSize: '1280x720', videoBg: '#101418', videoWave: '#5c6b7a', videoPlayed: '#4fc3f7', videoWaveStyle: 'scope', videoWavePosition: 'center', videoFit: 'cover', videoTitle: false, dialogWindow: 'auto', keepQueue: 'undownloaded', devUpdates: false }
+export const DEFAULT_SETTINGS: Settings = { theme: 'system', language: 'auto', uiScale: 1, format: 'mp3', wavFormat: 'pcm16', kbps: 192, sampleRate: 0, mono: false, videoSize: '1280x720', videoBg: '#101418', videoWave: '#5c6b7a', videoPlayed: '#4fc3f7', videoWaveStyle: 'bars', videoWavePosition: 'center', videoFit: 'cover', videoTitle: false, dialogWindow: 'auto', keepQueue: 'undownloaded', devUpdates: false }
 
 const KEY = app.key('settings')
 
