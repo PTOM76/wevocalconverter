@@ -181,7 +181,7 @@ function bars(clip: Clip, wave: VideoWave, box: WaveBox, fps: number): Painter {
   const levels = new Float32Array(BARS)
   // 1 秒で表示の高さの 1.5 倍ぶん下がる
   const fall = 1.5 / fps
-  const gap = Math.max(1, Math.round(box.width / BARS / 5))
+  const gap = Math.max(1, Math.round((box.width / BARS) * Math.min(0.8, Math.max(0, wave.gap ?? 0.2))))
   const barW = box.width / BARS - gap
   const grad = (ctx: OffscreenCanvasRenderingContext2D) => {
     const g = ctx.createLinearGradient(0, box.top + box.height, 0, box.top)

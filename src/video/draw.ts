@@ -27,6 +27,8 @@ export interface VideoWave {
   gradient?: boolean
   /** 音量の棒の数（細かさ。既定は 64） */
   bars?: number
+  /** 音量の棒の間の隙間が、棒 1 本ぶんの幅に占める割合（0〜0.8。既定は 0.2） */
+  gap?: number
 }
 
 /** 描画の設定 */
