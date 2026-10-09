@@ -71,7 +71,7 @@
   "queue.cancel": "中止",
   "queue.saveAll": "すべて保存",
   "queue.convert": "変換",
-  "queue.reconvert": "変換し直す",
+  "queue.reconvert": "再変換",
 
   "status.waiting": "待機中",
   "status.running": "変換中 {p}%",
