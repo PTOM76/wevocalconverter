@@ -14,10 +14,12 @@ export interface Settings {
   language: LangSetting
   /** 画面の大きさ（倍率。文字や入力欄などをまとめて拡大縮小する） */
   uiScale: number
-  /** 書き出す形式（webm、mp4 は動画）と、WAV のサンプル形式・MP3 / Opus のビットレート（kbps） */
+  /** 書き出す形式（webm、mp4 は動画）と、WAV のサンプル形式・MP3 / Opus / AAC のビットレート（kbps） */
   format: ExportFormat | VideoContainer
   wavFormat: WavFormat
   kbps: number
+  /** ファイルの大きさの上限（MB）。0 なら指定しない（ビットレートは kbps のまま） */
+  maxMB: number
   /** 出力のサンプルレート。0 なら元のまま */
   sampleRate: number
   /** モノラルにする */
@@ -49,7 +51,7 @@ export interface Settings {
 
 export type VideoSize = '1280x720' | '1920x1080' | '1080x1920' | '1080x1080'
 
-export const DEFAULT_SETTINGS: Settings = { theme: 'system', language: 'auto', uiScale: 1, format: 'mp3', wavFormat: 'pcm16', kbps: 192, sampleRate: 0, mono: false, videoSize: '1280x720', videoBg: '#101418', videoWave: '#5c6b7a', videoPlayed: '#4fc3f7', videoWaveStyle: 'bars', videoWavePosition: 'center', videoFit: 'cover', videoTitle: false, videoGradient: false, videoBars: 64, dialogWindow: 'auto', keepQueue: 'undownloaded', devUpdates: false }
+export const DEFAULT_SETTINGS: Settings = { theme: 'system', language: 'auto', uiScale: 1, format: 'mp3', wavFormat: 'pcm16', kbps: 192, maxMB: 0, sampleRate: 0, mono: false, videoSize: '1280x720', videoBg: '#101418', videoWave: '#5c6b7a', videoPlayed: '#4fc3f7', videoWaveStyle: 'bars', videoWavePosition: 'center', videoFit: 'cover', videoTitle: false, videoGradient: false, videoBars: 64, dialogWindow: 'auto', keepQueue: 'undownloaded', devUpdates: false }
 
 const KEY = app.key('settings')
 

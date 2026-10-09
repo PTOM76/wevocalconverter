@@ -24,6 +24,7 @@ export function useQueue(settings: Settings, bgImage: ImageBitmap | null) {
             format,
             wavFormat: settings.wavFormat,
             kbps: settings.kbps,
+            maxBytes: settings.maxMB ? settings.maxMB * 1024 * 1024 : null,
             sampleRate: settings.sampleRate || null,
             mono: settings.mono,
             ...common,

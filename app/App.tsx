@@ -5,7 +5,7 @@ import { faDownload, faFileArrowUp, faFolderOpen, faPlus } from '@fortawesome/fr
 import { AboutDialog, AppHeader, LicensesDialog, PevenLabels, ShortcutsDialog, useFilesDrop, useFilesPicker, setUiScale, FULL_HEIGHT, useLeaveGuard, useMobileLayout, WindowModeContext, autoWindowMode, type MenuGroup } from 'pevenmui'
 import { UpdatePrompt, checkForUpdate, formatBuild, promptUpdate } from 'pevenmui/pwa'
 import { configureFileAccess } from 'pevenmui/web'
-import { AUDIO_ACCEPT, downloadBlob, type ExportFormat } from 'wevocal-lib'
+import { AUDIO_ACCEPT, canEncodeAac, canEncodeOpus, downloadBlob, isLossy, type ExportFormat } from 'wevocal-lib'
 import type { VideoContainer } from '../src/index'
 import { openExternal, USER_GUIDE_URL } from './links'
 import { licenseEntries } from './licenses'
@@ -27,8 +27,10 @@ const AppIcon = ({ size }: { size: number }) => <img src={`${import.meta.env.BAS
 
 const FORMAT_OPTIONS: [ExportFormat | VideoContainer, MessageKey][] = [
   ['wav', 'opt.formatWav'],
+  ['flac', 'opt.formatFlac'],
   ['mp3', 'opt.formatMp3'],
   ['opus', 'opt.formatOpus'],
+  ['aac', 'opt.formatAac'],
   ['webm', 'opt.formatWebm'],
   ['mp4', 'opt.formatMp4'],
 ]
@@ -40,6 +42,8 @@ const RATE_OPTIONS: ['0' | '22050' | '32000' | '44100' | '48000', MessageKey][] 
   ['44100', 'opt.rate44100'],
   ['48000', 'opt.rate48000'],
 ]
+/** ファイルの大きさの上限の選択肢（MB。0 は指定しない） */
+const SIZE_OPTIONS: [string, MessageKey | { text: string }][] = [['0', 'opt.sizeNone'], ...[1, 5, 8, 10, 25, 50, 100].map((n): [string, { text: string }] => [String(n), { text: `${n} MB` }])]
 const CHANNEL_OPTIONS: ['original' | 'mono', MessageKey][] = [
   ['original', 'opt.channelsOriginal'],
   ['mono', 'opt.channelsMono'],
@@ -77,11 +81,16 @@ export default function App() {
   const q = useQueue(settings, bg.image?.bitmap ?? null)
   // 動画は、このブラウザで作れる入れ物だけを選択肢に表示する（調べ終わるまでは選んでいるものも残す）
   const videoSupport = useVideoSupport()
-  const formatOptions = FORMAT_OPTIONS.filter(([f]) => !isVideo(f) || videoSupport?.[f] || (!videoSupport && f === settings.format))
+  // Opus と AAC も WebCodecs で作るので、書き出せるときだけ表示する
+  const [codecSupport, setCodecSupport] = useState<Record<'opus' | 'aac', boolean> | null>(null)
+  useEffect(() => void Promise.all([canEncodeOpus(2), canEncodeAac(2)]).then(([opus, aac]) => setCodecSupport({ opus, aac })), [])
+  const support = (f: ExportFormat | VideoContainer): boolean | undefined =>
+    isVideo(f) ? videoSupport?.[f] : f === 'opus' || f === 'aac' ? codecSupport?.[f] : true
+  const formatOptions = FORMAT_OPTIONS.filter(([f]) => support(f) ?? f === settings.format)
   const video = isVideo(settings.format)
   useEffect(() => {
-    if (videoSupport && isVideo(settings.format) && !videoSupport[settings.format]) updateSettings({ format: 'mp3' })
-  }, [videoSupport, settings.format])
+    if (support(settings.format) === false) updateSettings({ format: 'mp3' })
+  }, [videoSupport, codecSupport, settings.format])
   // 開く画面はフォルダを覚える。最近使用したファイルの一覧はないので記録しない
   configureFileAccess({ rememberFolder: true, startFolder: 'music', recentFiles: false, pickerMode: 'auto' })
   const picker = useFilesPicker(AUDIO_ACCEPT, q.add, t('file.audioType'))
@@ -202,6 +211,16 @@ export default function App() {
                   onChange={(v) => updateSettings({ sampleRate: Number(v) })}
                   note={rateNote}
                 />
+                {isLossy(settings.format) && (
+                  <OptionSelect
+                    label={t('opt.size')}
+                    value={String(settings.maxMB)}
+                    disabled={q.running}
+                    options={SIZE_OPTIONS}
+                    onChange={(v) => updateSettings({ maxMB: Number(v) })}
+                    note={settings.maxMB ? t('opt.sizeNote') : undefined}
+                  />
+                )}
                 <OptionSelect label={t('opt.channels')} value={settings.mono ? 'mono' : 'original'} disabled={q.running} options={CHANNEL_OPTIONS} onChange={(v) => updateSettings({ mono: v === 'mono' })} />
               </>
             )}

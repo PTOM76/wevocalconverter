@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Box, Button, Typography } from '@mui/material'
 import { Check, Choice, Group, Row, SettingsDialog as PevenSettingsDialog, useConfirm, useHighlighter, type SettingsCategory, type WindowMode } from 'pevenmui'
 import { UpdateSection } from 'pevenmui/pwa'
-import type { WavFormat } from 'wevocal-lib'
+import { BITRATES, type WavFormat } from 'wevocal-lib'
 import { i18n, useT, type LangSetting, type MessageKey } from './i18n'
 import { clearQueue, queueSize, type KeepMode } from './persist'
 import { DEFAULT_SETTINGS, type Settings, type ThemeSetting } from './settings'
@@ -11,6 +11,8 @@ type Category = 'general' | 'convert' | 'data' | 'debug'
 
 /** 画面の大きさの選択肢（倍率） */
 const UI_SCALES = [0.9, 1, 1.1, 1.25, 1.5]
+/** ビットレートの選択肢（どれかの形式で選べるもの。形式で選べない値は、変換するときに一番近いものにする） */
+const KBPS_OPTIONS = [...new Set(Object.values(BITRATES).flat())].sort((a, b) => a - b)
 
 /** 設定の検索の対象: 分類ごとのグループ名・項目名・説明文の訳文キー。項目を足したらここにも足す */
 const INDEX: Record<Category, MessageKey[]> = {
@@ -154,7 +156,7 @@ export default function SettingsDialog({ open, onClose, settings, onChange, noti
               <Choice<string>
                 value={String(draft.kbps)}
                 onChange={(v) => set({ kbps: Number(v) })}
-                options={['128', '192', '256', '320'].map((k): [string, string] => [k, `${k} kbps`])}
+                options={KBPS_OPTIONS.map((k): [string, string] => [String(k), `${k} kbps`])}
               />
             </Row>
           </Group>

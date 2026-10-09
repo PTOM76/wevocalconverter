@@ -2,7 +2,7 @@
  * WeVocalConverter: 音声ファイルの形式を変換する（UI を持たず、React にも依存しない。画面は app/）。
  * 読み込みと書き出しは wevocal-lib（WeVocalSynth の書き出しと同じ部品）。形式を増やすときは、エンコーダーとデコーダーをここに置く
  */
-import { EXPORT_EXT, MP3_SAMPLE_RATES, OPUS_SAMPLE_RATE, decodeFile, exportAudio, type ExportFormat, type WavFormat } from 'wevocal-lib'
+import { AAC_SAMPLE_RATES, BITRATES, EXPORT_EXT, MP3_SAMPLE_RATES, OPUS_SAMPLE_RATE, decodeFile, exportAudio, isLossy, kbpsForSize, type ExportFormat, type WavFormat } from 'wevocal-lib'
 
 export type { ExportFormat, WavFormat } from 'wevocal-lib'
 
@@ -11,8 +11,10 @@ export interface ConvertOptions {
   format: ExportFormat
   /** WAV のサンプル形式 */
   wavFormat: WavFormat
-  /** MP3 / Opus のビットレート（kbps） */
+  /** MP3 / Opus / AAC のビットレート（kbps）。形式で選べない値なら一番近いものにする */
   kbps: number
+  /** ファイルの大きさの上限（バイト）。指定すると、長さからビットレートを決める（MP3 / Opus / AAC） */
+  maxBytes?: number | null
   /** 出力のサンプルレート。null なら元のまま（MP3 は扱える中で一番近いもの、Opus は常に 48kHz） */
   sampleRate: number | null
   /** モノラルにする */
@@ -33,8 +35,18 @@ export interface ConvertResult {
 export function outputRate(format: ExportFormat, source: number, wanted: number | null): number {
   if (format === 'opus') return OPUS_SAMPLE_RATE
   const rate = wanted ?? source
-  if (format === 'mp3') return MP3_SAMPLE_RATES.reduce((a, b) => (Math.abs(b - rate) < Math.abs(a - rate) ? b : a))
+  if (format === 'mp3') return nearest(MP3_SAMPLE_RATES, rate)
+  if (format === 'aac') return nearest(AAC_SAMPLE_RATES, rate)
   return rate
+}
+
+const nearest = (list: number[], v: number) => list.reduce((a, b) => (Math.abs(b - v) < Math.abs(a - v) ? b : a))
+
+/** 実際に書き出すビットレート（サイズの上限があれば長さ `seconds` から決める） */
+export function outputKbps(format: ExportFormat, kbps: number, seconds: number, maxBytes?: number | null): number {
+  if (!isLossy(format)) return kbps
+  if (maxBytes) return kbpsForSize(format, seconds, maxBytes)
+  return nearest(BITRATES[format], kbps)
 }
 
 /** `file` を読み込み、設定の形式で書き出す */
@@ -46,7 +58,7 @@ export async function convert(file: File, o: ConvertOptions): Promise<ConvertRes
   o.onProgress?.(0.5)
   const blob = await exportAudio(
     clip,
-    { format: o.format, wavFormat: o.wavFormat, kbps: o.kbps, sampleRate: outputRate(o.format, clip.sampleRate, o.sampleRate), mono: o.mono, range: null },
+    { format: o.format, wavFormat: o.wavFormat, kbps: outputKbps(o.format, o.kbps, clip.channels[0].length / clip.sampleRate, o.maxBytes), sampleRate: outputRate(o.format, clip.sampleRate, o.sampleRate), mono: o.mono, range: null },
     (p) => o.onProgress?.(0.5 + p * 0.5),
   )
   o.signal?.throwIfAborted()
