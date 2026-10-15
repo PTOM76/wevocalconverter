@@ -150,5 +150,7 @@
   "video.styleNone": "No waveform",
   "video.preview": "Preview",
   "video.bars256": "Very fine (256)",
-  "video.bars512": "Finest (512)"
+  "video.bars512": "Finest (512)",
+
+  "job.kind.update": "Updating"
 }

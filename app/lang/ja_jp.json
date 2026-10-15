@@ -150,5 +150,7 @@
   "video.styleNone": "波形なし",
   "video.preview": "プレビュー",
   "video.bars256": "とても細かい（256）",
-  "video.bars512": "最も細かい（512）"
+  "video.bars512": "最も細かい（512）",
+
+  "job.kind.update": "更新中"
 }

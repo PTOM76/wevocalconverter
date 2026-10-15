@@ -150,5 +150,7 @@
   "video.styleNone": "無波形",
   "video.preview": "預覽",
   "video.bars256": "很細（256）",
-  "video.bars512": "最細（512）"
+  "video.bars512": "最細（512）",
+
+  "job.kind.update": "正在更新"
 }

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Box, Button, Link, Paper, Snackbar, Stack, Typography, useColorScheme } from '@mui/material'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faDownload, faFileArrowUp, faFolderOpen, faPlus } from '@fortawesome/free-solid-svg-icons'
-import { AboutDialog, AppHeader, LicensesDialog, PevenLabels, ShortcutsDialog, useFilesDrop, useFilesPicker, setUiScale, FULL_HEIGHT, useLeaveGuard, useMobileLayout, WindowModeContext, autoWindowMode, type MenuGroup } from 'pevenmui'
+import { AboutDialog, AppHeader, JobGauge, LicensesDialog, PevenLabels, ShortcutsDialog, useFilesDrop, useFilesPicker, setUiScale, FULL_HEIGHT, useLeaveGuard, useMobileLayout, WindowModeContext, autoWindowMode, type MenuGroup } from 'pevenmui'
 import { UpdatePrompt, checkForUpdate, formatBuild, promptUpdate } from 'pevenmui/pwa'
 import { configureFileAccess } from 'pevenmui/web'
 import { AUDIO_ACCEPT, canEncodeAac, canEncodeOpus, downloadBlob, isLossy, type ExportFormat } from 'wevocal-lib'
@@ -261,6 +261,10 @@ export default function App() {
                 </Button>
               </Stack>
             )}
+          </Box>
+          {/* 処理中のゲージ（更新を押したあとの「更新中」。PevenMUI の JobGauge。何もなければ何も出ない） */}
+          <Box sx={{ flexShrink: 0, '&:not(:empty)': { borderTop: 1, borderColor: 'divider', py: 0.5 } }}>
+            <JobGauge kindLabel={() => t('job.kind.update')} />
           </Box>
         </Box>
 

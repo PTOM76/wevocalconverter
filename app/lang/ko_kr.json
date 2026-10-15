@@ -150,5 +150,7 @@
   "video.styleNone": "파형 없음",
   "video.preview": "미리보기",
   "video.bars256": "매우 세밀하게(256)",
-  "video.bars512": "가장 세밀하게(512)"
+  "video.bars512": "가장 세밀하게(512)",
+
+  "job.kind.update": "업데이트 중"
 }
