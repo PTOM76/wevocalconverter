@@ -66,8 +66,8 @@ export function previewTime(clip: Clip): number {
 }
 
 /** 動画の 1 フレームを画像にする（書き出す前のプレビュー）。`time` は秒 */
-export async function renderFrame(clip: Clip, look: VideoLook, time: number, fps = 30): Promise<Blob> {
-  const renderer = new FrameRenderer(clip, look, fps)
+export async function renderFrame(clip: Clip, look: VideoLook, time: number, fps = 30, quality: 'rough' | 'full' = 'full'): Promise<Blob> {
+  const renderer = new FrameRenderer(clip, look, fps, quality)
   renderer.draw(time)
   return renderer.canvas.convertToBlob({ type: 'image/jpeg', quality: 0.85 })
 }
@@ -75,12 +75,14 @@ export async function renderFrame(clip: Clip, look: VideoLook, time: number, fps
 /** `clip` に簡易な波形を付けて動画にする */
 export async function renderVideo(source: Clip, o: VideoOptions): Promise<Blob> {
   const clip = await prepareClip(source, { range: null, sampleRate: AUDIO_RATE, mono: source.channels.length === 1 })
+  o.signal?.throwIfAborted()
   const channels = Math.min(2, clip.channels.length)
   const codecs = await pickCodecs(o.container, o.width, o.height, channels)
   if (!codecs) throw new Error(`cannot encode ${o.container}`)
   o.signal?.throwIfAborted()
 
   const renderer = new FrameRenderer(clip, o, o.fps)
+  o.signal?.throwIfAborted()
   const output = new Output({
     format: o.container === 'mp4' ? new Mp4OutputFormat({ fastStart: 'in-memory' }) : new WebMOutputFormat(),
     target: new BufferTarget(),
@@ -113,6 +115,7 @@ export async function renderVideo(source: Clip, o: VideoOptions): Promise<Blob> 
       o.onProgress?.(frame / frames)
     }
     await output.finalize()
+    o.signal?.throwIfAborted()
   } catch (e) {
     if (output.state !== 'finalized') await output.cancel()
     throw e

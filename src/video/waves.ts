@@ -2,6 +2,7 @@ import type { Clip } from 'wevocal-lib'
 import type { VideoWave, WaveBox } from './draw'
 
 type Painter = (ctx: OffscreenCanvasRenderingContext2D, time: number) => void
+export type WaveQuality = 'rough' | 'full'
 
 /** その瞬間の波形で、画面の幅に入れる長さ（秒） */
 const SCOPE_SECONDS = 0.04
@@ -15,7 +16,11 @@ const BAR_MAX_HZ = 16000
 const BAR_RANGE_DB = 60
 
 /** `block` サンプルごとの最小値と最大値（全チャンネルを通す） */
-function blockPeaks(clip: Clip, block: number): { min: Float32Array; max: Float32Array } {
+const peakCache = new WeakMap<Clip, Map<string, { min: Float32Array; max: Float32Array }>>()
+function blockPeaks(clip: Clip, block: number, quality: WaveQuality): { min: Float32Array; max: Float32Array } {
+  const key = `${block}:${quality}`
+  const cached = peakCache.get(clip)?.get(key)
+  if (cached) return cached
   const len = clip.channels[0].length
   const n = Math.ceil(len / block)
   const min = new Float32Array(n)
@@ -25,8 +30,10 @@ function blockPeaks(clip: Clip, block: number): { min: Float32Array; max: Float3
     const e = Math.min(len, Math.floor((b + 1) * block))
     let lo = 0
     let hi = 0
+    const count = quality === 'rough' ? Math.min(32, e - s) : e - s
     for (const ch of clip.channels) {
-      for (let i = s; i < e; i++) {
+      for (let j = 0; j < count; j++) {
+        const i = s + Math.floor((j * (e - s)) / count)
         const v = ch[i]
         if (v < lo) lo = v
         if (v > hi) hi = v
@@ -35,7 +42,11 @@ function blockPeaks(clip: Clip, block: number): { min: Float32Array; max: Float3
     min[b] = lo
     max[b] = hi
   }
-  return { min, max }
+  const peaks = { min, max }
+  let byQuality = peakCache.get(clip)
+  if (!byQuality) peakCache.set(clip, (byQuality = new Map()))
+  byQuality.set(key, peaks)
+  return peaks
 }
 
 /** 縦の線を並べて波形を描く。`from` 番目の列から `count` 列 */
@@ -52,9 +63,9 @@ function drawColumns(ctx: OffscreenCanvasRenderingContext2D, box: WaveBox, peaks
 }
 
 /** 全体の波形と再生位置の線。波形は 2 色で先に描いておき、再生した側だけを切り出して重ねる */
-function overview(clip: Clip, wave: VideoWave, box: WaveBox): Painter {
+function overview(clip: Clip, wave: VideoWave, box: WaveBox, quality: WaveQuality): Painter {
   const duration = clip.channels[0].length / clip.sampleRate
-  const peaks = blockPeaks(clip, clip.channels[0].length / box.width)
+  const peaks = blockPeaks(clip, clip.channels[0].length / box.width, quality)
   const layer = (color: string) => {
     const c = new OffscreenCanvas(box.width, Math.ceil(box.top + box.height))
     const ctx = c.getContext('2d')!
@@ -74,9 +85,9 @@ function overview(clip: Clip, wave: VideoWave, box: WaveBox): Painter {
 }
 
 /** 再生位置を中央に固定し、波形が右から左へ流れる。左半分（再生した側）は再生した色 */
-function scroll(clip: Clip, wave: VideoWave, box: WaveBox): Painter {
+function scroll(clip: Clip, wave: VideoWave, box: WaveBox, quality: WaveQuality): Painter {
   const block = (SCROLL_SECONDS * clip.sampleRate) / box.width
-  const peaks = blockPeaks(clip, block)
+  const peaks = blockPeaks(clip, block, quality)
   const half = Math.floor(box.width / 2)
   return (ctx, time) => {
     const at = Math.round((time * clip.sampleRate) / block)
@@ -220,10 +231,10 @@ function bars(clip: Clip, wave: VideoWave, box: WaveBox, fps: number): Painter {
 }
 
 /** 波形の種類ごとの描き方 */
-export function createWavePainter(clip: Clip, wave: VideoWave, box: WaveBox, fps: number): Painter {
+export function createWavePainter(clip: Clip, wave: VideoWave, box: WaveBox, fps: number, quality: WaveQuality = 'full'): Painter {
   if (wave.style === 'none') return () => {}
   if (wave.style === 'scope') return scope(clip, wave, box)
-  if (wave.style === 'scroll') return scroll(clip, wave, box)
+  if (wave.style === 'scroll') return scroll(clip, wave, box, quality)
   if (wave.style === 'bars') return bars(clip, wave, box, fps)
-  return overview(clip, wave, box)
+  return overview(clip, wave, box, quality)
 }

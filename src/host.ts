@@ -16,9 +16,9 @@ export function createVideoHost(loadAddon: <T>(id: string) => Promise<T>) {
     /** このブラウザでその入れ物の動画を作れるか */
     canEncodeVideo: async (container: VideoContainer, width: number, height: number) => (await load()).canEncodeVideo(container, width, height),
     /** 動画の 1 フレームを画像にする（プレビュー）。曲の中ほどで音が最も大きいところを描く */
-    renderPreview: async (clip: Parameters<typeof Video.renderFrame>[0], look: VideoLook) => {
+    renderPreview: async (clip: Parameters<typeof Video.renderFrame>[0], look: VideoLook, quality: 'rough' | 'full' = 'full') => {
       const m = await load()
-      return m.renderFrame(clip, look, m.previewTime(clip))
+      return m.renderFrame(clip, look, m.previewTime(clip), 30, quality)
     },
     /** 音声に簡易な波形を付けて動画にする */
     renderVideo: async (clip: Parameters<typeof Video.renderVideo>[0], options: Video.VideoOptions) => (await load()).renderVideo(clip, options),

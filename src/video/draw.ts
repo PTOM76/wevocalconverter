@@ -1,5 +1,5 @@
 import type { Clip } from 'wevocal-lib'
-import { createWavePainter } from './waves'
+import { createWavePainter, type WaveQuality } from './waves'
 
 /** 背景（単色、または静止画） */
 export interface VideoBackground {
@@ -89,7 +89,7 @@ export class FrameRenderer {
   private readonly base: OffscreenCanvas
   private readonly paint: (ctx: OffscreenCanvasRenderingContext2D, time: number) => void
 
-  constructor(clip: Clip, look: VideoLook, fps: number) {
+  constructor(clip: Clip, look: VideoLook, fps: number, quality: WaveQuality = 'full') {
     const { width: w, height: h } = look
     this.canvas = new OffscreenCanvas(w, h)
     this.ctx = this.canvas.getContext('2d')!
@@ -97,7 +97,7 @@ export class FrameRenderer {
     const b = this.base.getContext('2d')!
     drawBackground(b, look)
     drawTitle(b, look)
-    this.paint = createWavePainter(clip, look.wave, waveBox(look), fps)
+    this.paint = createWavePainter(clip, look.wave, waveBox(look), fps, quality)
   }
 
   /** 再生位置（秒）のフレームを描く */

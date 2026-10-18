@@ -119,11 +119,20 @@ export default function VideoExportDialog(p: Props) {
     let url: string | null = null
     let cancelled = false
     const timer = setTimeout(() => {
-      void renderPreview(p.previewClip, videoLook(pr, image?.bitmap ?? null, s.fileName.trim())).then((blob) => {
+      void (async () => {
+        const look = videoLook(pr, image?.bitmap ?? null, s.fileName.trim())
+        const rough = await renderPreview(p.previewClip, look, 'rough')
         if (cancelled) return
-        url = URL.createObjectURL(blob)
+        url = URL.createObjectURL(rough)
         setPreview(url)
-      })
+        const full = await renderPreview(p.previewClip, look, 'full')
+        if (cancelled) return
+        const nextUrl = URL.createObjectURL(full)
+        const previousUrl = url
+        url = nextUrl
+        setPreview(nextUrl)
+        if (previousUrl) URL.revokeObjectURL(previousUrl)
+      })().catch((e: unknown) => console.error('Video preview failed', e))
     }, 150)
     return () => {
       cancelled = true
